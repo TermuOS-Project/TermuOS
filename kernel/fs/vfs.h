@@ -49,6 +49,7 @@ typedef struct
     uint64_t offset;
     uint32_t flags;
     int used;
+    uint32_t owner; /* pid that must release this fd; 0 = kernel-owned */
 } vfs_fd_t;
 
 void vfs_init(void);
@@ -57,6 +58,17 @@ vfs_node_t *vfs_resolve(const char *path);
 
 int vfs_open(const char *path, uint32_t flags);
 int vfs_close(int fd);
+
+/*
+ * Descriptor ownership. A descriptor opened for a process is tagged with its
+ * pid so it can be reclaimed when that process exits — the descriptor table
+ * is global, so a program that exits without closing would otherwise leak a
+ * slot for the rest of the boot. Descriptors the kernel opens for itself stay
+ * owner 0 and are never reclaimed automatically.
+ */
+void vfs_fd_set_owner(int fd, uint32_t owner);
+uint32_t vfs_fd_owner(int fd);
+int vfs_close_all_owned(uint32_t owner);
 int vfs_read(int fd, void *buf, size_t len);
 int vfs_write(int fd, const void *buf, size_t len);
 int vfs_readdir(int fd, uint32_t idx, char *name_out);

@@ -85,6 +85,15 @@ CASES = [
     ("run /bin/writetest.tsys",
      ["writetest done", "exited with code 0"]),
 
+    # open()/close() (issue #43). fdleak runs first on purpose: it exits with
+    # descriptors still open, so if exiting leaks them, opentest's "first
+    # descriptor is 3" check below fails.
+    ("run /bin/fdleak.tsys",
+     ["fdleak: opened without closing", "exited with code 0"]),
+
+    ("run /bin/opentest.tsys",
+     ["opentest done", "exited with code 0"]),
+
     # User-buffer helpers (issue #40).
     ("run /bin/uatest.tsys",
      ["uatest done", "exited with code 0"]),

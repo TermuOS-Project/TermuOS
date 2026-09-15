@@ -72,7 +72,10 @@ void vfs_init(void)
     for (int i = 0; i < VFS_MAX_MOUNTS; i++)
         mounts[i].used = 0;
     for (int i = 0; i < VFS_MAX_FDS; i++)
+    {
         fds[i].used = 0;
+        fds[i].owner = 0;
+    }
 }
 
 int vfs_mount(const char *path, vfs_node_t *root)
@@ -243,6 +246,7 @@ int vfs_open(const char *path, uint32_t flags)
     fds[fd].offset = (flags & O_APPEND) ? node->size : 0;
     fds[fd].flags = flags;
     fds[fd].used = 1;
+    fds[fd].owner = 0; /* kernel-owned until a caller claims it */
     return fd;
 }
 
@@ -253,7 +257,38 @@ int vfs_close(int fd)
     if (fds[fd].node->ops && fds[fd].node->ops->close)
         fds[fd].node->ops->close(fds[fd].node);
     fds[fd].used = 0;
+    fds[fd].owner = 0;
     return 0;
+}
+
+void vfs_fd_set_owner(int fd, uint32_t owner)
+{
+    if (fd < 0 || fd >= VFS_MAX_FDS || !fds[fd].used)
+        return;
+    fds[fd].owner = owner;
+}
+
+uint32_t vfs_fd_owner(int fd)
+{
+    if (fd < 0 || fd >= VFS_MAX_FDS || !fds[fd].used)
+        return 0;
+    return fds[fd].owner;
+}
+
+/* Release every descriptor a process still held. Returns how many. */
+int vfs_close_all_owned(uint32_t owner)
+{
+    int closed = 0;
+
+    if (owner == 0)
+        return 0; /* never sweep the kernel's own descriptors */
+
+    for (int i = 0; i < VFS_MAX_FDS; i++)
+        if (fds[i].used && fds[i].owner == owner)
+            if (vfs_close(i) == 0)
+                closed++;
+
+    return closed;
 }
 
 int vfs_read(int fd, void *buf, size_t len)

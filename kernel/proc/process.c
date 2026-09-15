@@ -3,6 +3,7 @@
 #include "../mm/heap.h"
 #include "../lib/printf.h"
 #include "../ob/object.h"
+#include "../fs/vfs.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -126,6 +127,12 @@ void proc_exit(process_t *proc, int32_t code)
 
   for (int i = 0; i < MAX_HANDLES; i++)
     handle_close(&proc->handles, i);
+
+  /* The VFS descriptor table is global, so anything this process left open
+     would hold its slot for the rest of the boot. Take them back. */
+  int leaked = vfs_close_all_owned(proc->pid);
+  if (leaked > 0)
+    kprintf("proc: reclaimed %d open fd(s) from pid %u\n", leaked, proc->pid);
 
   if (proc->ob_header)
   {

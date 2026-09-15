@@ -343,15 +343,31 @@ static uint64_t sys_read(uint64_t fd, uint64_t buf, uint64_t len)
     return (uint64_t)n;
 }
 
+/*
+ * open(path, flags)
+ *
+ * flags are the O_* bits from fs/vfs.h, not the Linux ones: the access mode
+ * is a bit field here rather than a two-bit value. tsys/lib/include/syscall.h
+ * must agree with it.
+ *
+ *   O_RDONLY 0x01   O_WRONLY 0x02   O_RDWR 0x03
+ *   O_CREAT  0x04   O_TRUNC  0x08   O_APPEND 0x10
+ *
+ * The path is copied into the kernel before use and may be at most
+ * VFS_PATH_MAX - 1 bytes plus its terminator; anything longer is rejected
+ * rather than silently shortened.
+ */
 static uint64_t sys_open(uint64_t path_uva, uint64_t flags, uint64_t mode)
 {
     (void)mode;
     process_t *proc = cur_proc();
-    char path[256];
+    char path[VFS_PATH_MAX];
 
     if (!proc || !path_uva)
         return (uint64_t)-1;
     if (copy_user_str(proc, path, path_uva, sizeof path) < 0)
+        return (uint64_t)-1;
+    if (path[0] == '\0')
         return (uint64_t)-1;
 
     uint32_t need = (flags & O_WRONLY) ? PERM_FS_WRITE : PERM_FS_READ;
@@ -359,12 +375,30 @@ static uint64_t sys_open(uint64_t path_uva, uint64_t flags, uint64_t mode)
         return (uint64_t)-1;
 
     int fd = vfs_open(path, (uint32_t)flags);
-    return (uint64_t)(int64_t)fd;
+    if (fd < 0)
+        return (uint64_t)-1;
+
+    /* Tag it so process exit can reclaim it if the program never closes. */
+    vfs_fd_set_owner(fd, proc->pid);
+    return (uint64_t)fd;
 }
 
 static uint64_t sys_close(uint64_t fd)
 {
-    return (uint64_t)vfs_close((int)fd);
+    process_t *proc = cur_proc();
+
+    if (!proc)
+        return (uint64_t)-1;
+
+    /* 0, 1 and 2 are the console, not VFS descriptors. */
+    if ((int)fd <= 2)
+        return (uint64_t)-1;
+
+    /* A process may only close what it opened. */
+    if (vfs_fd_owner((int)fd) != proc->pid)
+        return (uint64_t)-1;
+
+    return (uint64_t)(int64_t)vfs_close((int)fd);
 }
 
 static uint64_t sys_getpid(void)
