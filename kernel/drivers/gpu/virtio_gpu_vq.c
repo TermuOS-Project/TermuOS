@@ -72,6 +72,12 @@ extern uint64_t kvirt_to_phys(void *virt);
 extern uint64_t termuos_hhdm_base(void);
 
 static uint8_t qmem[64 * 1024] __attribute__((aligned(4096)));
+static volatile uint8_t *g_common;
+static volatile uint8_t *g_notify;
+static uint32_t g_notify_mult;
+static uint16_t g_qsz;
+static uint32_t g_avail_off;
+static uint32_t g_used_off;
 
 static inline void mmio_w8(volatile uint8_t *b, uint32_t off, uint8_t v)
 {
@@ -181,6 +187,13 @@ int virtio_gpu_vq_init_and_get_display(volatile uint8_t *common,
     st = mmio_r8(common, CFG_STATUS);
     mmio_w8(common, CFG_STATUS, st | VIRTIO_STATUS_DRIVER_OK);
 
+    g_common = common;
+    g_notify = notify;
+    g_qsz = qsz;
+    g_avail_off = avail_off;
+    g_used_off = used_off;
+    kprintf("virtio-gpu: submit ready qsz=%u\n", g_qsz);
+
     /* --- GET_DISPLAY_INFO --- */
     struct virtio_gpu_ctrl_hdr *req =
         (struct virtio_gpu_ctrl_hdr *)&qmem[REQ_OFF];
@@ -252,4 +265,53 @@ int virtio_gpu_vq_init_and_get_display(volatile uint8_t *common,
     kprintf("virtio-gpu: phase4 ok %ux%u\n",
             resp->pmodes[0].r.width, resp->pmodes[0].r.height);
     return 0;
+}
+
+int virtio_gpu_submit(void *out, uint32_t out_len, void *in, uint32_t in_len)
+{
+    if (!g_common || !g_notify || !out || !in || out_len == 0 || in_len == 0)
+    {
+        kprintf("virtio-gpu: submit: no g_common/notify\n");
+        return -1;
+    }
+    kprintf("virtio-gpu: submit out=%x in=%x olen=%u ilen=%u\n",
+            (uint32_t)clean_phys(out), (uint32_t)clean_phys(in),
+            out_len, in_len);
+
+    struct vring_desc *desc = (struct vring_desc *)&qmem[0];
+    /* use desc 0 and 1 for simplicity (single in-flight cmd) */
+    desc[0].addr = clean_phys(out);
+    desc[0].len = out_len;
+    desc[0].flags = VRING_DESC_F_NEXT;
+    desc[0].next = 1;
+    desc[1].addr = clean_phys(in);
+    desc[1].len = in_len;
+    desc[1].flags = VRING_DESC_F_WRITE;
+    desc[1].next = 0;
+
+    uint16_t *avail_idx = (uint16_t *)&qmem[g_avail_off + 2];
+    uint16_t *avail_ring = (uint16_t *)&qmem[g_avail_off + 4];
+    uint16_t *used_idx = (uint16_t *)&qmem[g_used_off + 2];
+
+    uint16_t before = *used_idx;
+    uint16_t aidx = *avail_idx;
+    avail_ring[aidx % g_qsz] = 0;
+    __sync_synchronize();
+    *avail_idx = (uint16_t)(aidx + 1);
+    __sync_synchronize();
+    __asm__ volatile("mfence" ::: "memory");
+
+    mmio_w16(g_common, CFG_QSEL, 0);
+    uint16_t noff = mmio_r16(g_common, CFG_QNOTIFY);
+    volatile uint8_t *naddr = g_notify + (uint32_t)noff * g_notify_mult;
+    *(volatile uint16_t *)naddr = 0;
+    *(volatile uint32_t *)naddr = 0;
+
+    for (volatile uint32_t i = 0; i < 50000000u; i++)
+        if (*used_idx != before)
+            break;
+    if (*used_idx == before)
+        return -1;
+
+    return (int)(*(uint32_t *)in);
 }

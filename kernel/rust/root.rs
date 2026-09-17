@@ -14,3 +14,6 @@ mod rdrand;
 
 #[path = "../drivers/gpu/virtio_gpu.rs"]
 mod virtio_gpu;
+
+#[path = "../drivers/gpu/virtio_gpu_phase5.rs"]
+mod virtio_gpu_phase5;

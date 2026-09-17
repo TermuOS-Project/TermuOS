@@ -40,6 +40,7 @@ extern "C" {
         notify: *mut u8,
         notify_mult: u32,
     ) -> i32;
+    fn virtio_gpu_phase5_rust() -> i32;
 }
 
 unsafe fn pci_read8(bus: u8, slot: u8, func: u8, off: u8) -> u8 {
@@ -196,6 +197,8 @@ pub extern "C" fn virtio_gpu_rust_probe() {
         let rc = virtio_gpu_vq_init_and_get_display(common, notify, notify_mult);
         if rc != 0 {
             kprintf(b"virtio-gpu: vq/display failed\n\0".as_ptr());
+        } else {
+            let _ = virtio_gpu_phase5_rust();
         }
     }
 }

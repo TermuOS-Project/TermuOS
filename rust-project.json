@@ -36,6 +36,12 @@
             "root_module": "kernel/drivers/gpu/virtio_gpu.rs",
             "edition": "2021",
             "deps": []
+        },
+        {
+            "display_name": "virtio_gpu_phase5",
+            "root_module": "kernel/drivers/gpu/virtio_gpu_phase5.rs",
+            "edition": "2021",
+            "deps": []
         }
     ]
 }
