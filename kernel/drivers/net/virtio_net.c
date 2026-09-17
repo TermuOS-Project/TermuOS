@@ -129,9 +129,12 @@ static inline uint16_t inw(uint16_t p)
 
 uint64_t kvirt_to_phys(void *virt)
 {
+    uint64_t va = (uint64_t)virt;
     uint64_t cr3;
     __asm__ volatile("movq %%cr3,%0" : "=r"(cr3));
-    return vmm_virt_to_phys(cr3, (uint64_t)virt);
+
+    uint64_t page = vmm_virt_to_phys(cr3, va & ~0xFFFULL) & 0x000FFFFFFFFFF000ULL;
+    return page | (va & 0xFFFULL);
 }
 
 // ─── Queue init ───────────────────────────────────────────────────────────────
