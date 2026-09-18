@@ -321,7 +321,7 @@ test: iso test-img
 run: iso $(DISK_IMG) tools/tfs_write tsys-install
 	@qemu-system-x86_64 -cdrom termuos.iso -cpu qemu64,+syscall \
 		-netdev user,id=net0 \
-		-device virtio-net-pci,netdev=net0 \
+		-device virtio-net-pci,netdev=net0,disable-modern=on \
 		-device virtio-gpu-pci \
 		-drive file=$(DISK_IMG),format=raw,if=ide \
 		-serial stdio 

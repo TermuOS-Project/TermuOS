@@ -149,6 +149,7 @@ void kernel_main(void)
     vfs_mount("/dev", devfs_create());
 
     pci_init();
+    kprintf("virtio_net_init...\n");
     virtio_net_init();
 
     process_t *sp = proc_create("shell");

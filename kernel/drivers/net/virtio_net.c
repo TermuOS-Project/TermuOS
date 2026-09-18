@@ -324,55 +324,78 @@ void virtio_net_poll(void)
 static void virtio_irq(registers_t *r)
 {
     (void)r;
-    uint8_t isr = inb(io_base + VIRTIO_PCI_ISR);
-    if (!(isr & 1))
-        return;
-    virtio_net_poll();
+    (void)inb(io_base + VIRTIO_PCI_ISR);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 int virtio_net_init(void)
 {
+    kprintf("virtio-net: enter\n");
+
     pci_device_t dev;
     if (pci_find(PCI_VENDOR_VIRTIO, PCI_DEVICE_NET, &dev) < 0)
+    {
+        kprintf("virtio-net: not found\n");
         return -1;
+    }
+    kprintf("virtio-net: found bar0=%x irq=%u\n", dev.bar[0], dev.irq);
 
-    io_base = dev.bar[0] & ~0x3u;
+    if (!(dev.bar[0] & 1))
+    {
+        kprintf("virtio-net: no I/O BAR - skip\n");
+        return -1;
+    }
+    io_base = (uint16_t)(dev.bar[0] & ~0x3u);
+    kprintf("virtio-net: io_base=%x\n", io_base);
+
     pci_enable_busmaster(&dev);
+    kprintf("virtio-net: busmaster ok\n");
 
     // Reset
     outb(io_base + VIRTIO_PCI_STATUS, 0);
+    kprintf("virtio-net: reset ok\n");
     outb(io_base + VIRTIO_PCI_STATUS, VIRTIO_STATUS_ACKNOWLEDGE);
     outb(io_base + VIRTIO_PCI_STATUS, VIRTIO_STATUS_ACKNOWLEDGE | VIRTIO_STATUS_DRIVER);
 
     // Negotiate MAC feature only
     uint32_t host_feat = 0;
     __asm__ volatile("inl %1,%0" : "=a"(host_feat) : "Nd"((uint16_t)(io_base + VIRTIO_PCI_HOST_FEATURES)));
+    kprintf("virtio-net: host_feat=%x\n", host_feat);
+
     uint32_t our_feat = host_feat & VIRTIO_NET_F_MAC;
     __asm__ volatile("outl %0,%1" ::"a"(our_feat), "Nd"((uint16_t)(io_base + VIRTIO_PCI_GUEST_FEATURES)));
+    kprintf("virtio-net: guest features set\n");
 
     // Read MAC
     for (int i = 0; i < 6; i++)
         netif.mac.b[i] = inb(io_base + VIRTIO_PCI_CONFIG + i);
+    kprintf("virtio-net: mac ok\n");
 
     // Setup queues
     if (init_queue(0, &rxq, rxq_mem) < 0)
+    {
+        kprintf("virtio-net: rx queue fail\n");
         return -1;
+    }
+    kprintf("virtio-net: rx queue ok\n");
+
     if (init_queue(1, &txq, txq_mem) < 0)
+    {
+        kprintf("virtio-net: tx queue fail\n");
         return -1;
+    }
+    kprintf("virtio-net: tx queue ok\n");
 
     // Fill RX queue with all slots
     for (int i = 0; i < RX_SLOTS; i++)
         rx_refill(i);
-    outw(io_base + VIRTIO_PCI_QUEUE_NOTIFY, 0); // kick RX queue
-
-    // Register IRQ
-    idt_register_irq(dev.irq, virtio_irq);
+    kprintf("virtio-net: rx filled\n");
 
     // Driver ready
     outb(io_base + VIRTIO_PCI_STATUS,
          VIRTIO_STATUS_ACKNOWLEDGE | VIRTIO_STATUS_DRIVER | VIRTIO_STATUS_DRIVER_OK);
+    kprintf("virtio-net: DRIVER_OK\n");
 
     // Configure interface
     netif.ip.b[0] = 10;
@@ -389,6 +412,8 @@ int virtio_net_init(void)
     netif.netmask.b[3] = 0;
     netif.send = virtio_send;
 
+    kprintf("virtio-net: net_init...\n");
     net_init();
+    kprintf("virtio-net: done\n");
     return 0;
 }
