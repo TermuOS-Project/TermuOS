@@ -5,6 +5,7 @@
 #include "../drivers/serial/serial.h"
 #include "../drivers/video/fb.h"
 #include "../drivers/input/keyboard.h"
+#include "../drivers/driver.h"
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
 #include "../mm/pmm.h"
@@ -633,6 +634,29 @@ static uint64_t sys_wait(uint64_t pid)
     }
 }
 
+static uint64_t sys_lsdrv(uint64_t user_buf, uint64_t max)
+{
+    process_t *proc = cur_proc();
+
+    if (!proc)
+        return (uint64_t)-1;
+
+    if (max == 0 || max > DRIVER_MAX)
+        max = DRIVER_MAX;
+
+    driver_info_t tmp[DRIVER_MAX];
+    int n = drivers_list(tmp, (int)max);
+    if (n <= 0)
+        return 0;
+
+    size_t bytes = (size_t)n * sizeof(driver_info_t);
+
+    if (copy_to_user(proc, user_buf, tmp, bytes) != 0)
+        return (uint64_t)-1;
+
+    return (uint64_t)n;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
@@ -685,6 +709,8 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_spawn(a);
     case SYS_WAIT:
         return sys_wait(a);
+    case SYS_LSDRV:
+        return sys_lsdrv(a, b);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;

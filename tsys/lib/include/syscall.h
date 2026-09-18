@@ -5,6 +5,7 @@
 #define SYS_OPEN 2
 #define SYS_CLOSE 3
 #define SYS_EXIT 60
+#define SYS_LSDRV 501
 
 /* Must match kernel/fs/vfs.h — these go straight to vfs_open(). They are
  * not the Linux values: this kernel treats the access mode as flag bits. */
