@@ -16,8 +16,8 @@ struct CtrlHdr {
     flags: u32,
     fence_id: u64,
     ctx_id: u32,
-    ring_idx: u32,
-    padding: u32,
+    ring_idx: u8,
+    padding: [u8; 3],
 }
 
 #[repr(C)]
@@ -109,11 +109,15 @@ fn zero_hdr(h: &mut CtrlHdr) {
     h.fence_id = 0;
     h.ctx_id = 0;
     h.ring_idx = 0;
-    h.padding = 0;
+    h.padding = [0; 3];
 }
 
 unsafe fn submit_ok(out: *mut u8, out_len: usize) -> bool {
-    core::ptr::write_bytes(core::ptr::addr_of_mut!(RESP) as *mut u8, 0, core::mem::size_of::<RespHdr>());
+    core::ptr::write_bytes(
+        core::ptr::addr_of_mut!(RESP) as *mut u8,
+        0,
+        core::mem::size_of::<RespHdr>(),
+    );
     let t = virtio_gpu_submit(
         out,
         out_len as u32,
@@ -125,7 +129,7 @@ unsafe fn submit_ok(out: *mut u8, out_len: usize) -> bool {
         return false;
     }
     if (t as u32) != VIRTIO_GPU_RESP_OK_NODATA {
-        kprintf(b"virtio-gpu: phase5 bas resp\n\0".as_ptr());
+        kprintf(b"virtio-gpu: phase5 bad resp\n\0".as_ptr());
         return false;
     }
     true
@@ -150,7 +154,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
             fence_id: 0,
             ctx_id: 0,
             ring_idx: 0,
-            padding: 0,
+            padding: [0, 0, 0],
         },
         resource_id: FB_ID,
         format: VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM,
@@ -159,6 +163,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
     };
     zero_hdr(&mut c.hdr);
     c.hdr.type_ = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D;
+    kprintf(b"virtio-gpu: phase5 CREATE\n\0".as_ptr());
     if !submit_ok(
         &mut c as *mut _ as *mut u8,
         core::mem::size_of::<ResourceCreate2d>(),
@@ -175,7 +180,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
                 fence_id: 0,
                 ctx_id: 0,
                 ring_idx: 0,
-                padding: 0,
+                padding: [0, 0, 0],
             },
             resource_id: FB_ID,
             nr_entries: 1,
@@ -188,6 +193,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
     };
     zero_hdr(&mut ab.a.hdr);
     ab.a.hdr.type_ = VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING;
+    kprintf(b"virtio-gpu: phase5 ATTACH\n\0".as_ptr());
     if !submit_ok(
         &mut ab as *mut _ as *mut u8,
         core::mem::size_of::<AttachBackingMsg>(),
@@ -203,7 +209,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
             fence_id: 0,
             ctx_id: 0,
             ring_idx: 0,
-            padding: 0,
+            padding: [0, 0, 0],
         },
         r: Rect {
             x: 0,
@@ -216,7 +222,11 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
     };
     zero_hdr(&mut s.hdr);
     s.hdr.type_ = VIRTIO_GPU_CMD_SET_SCANOUT;
-    if !submit_ok(&mut s as *mut _ as *mut u8, core::mem::size_of::<SetScanout>()) {
+    kprintf(b"virtio-gpu: phase5 SET_SCANOUT\n\0".as_ptr());
+    if !submit_ok(
+        &mut s as *mut _ as *mut u8,
+        core::mem::size_of::<SetScanout>(),
+    ) {
         return -1;
     }
 
@@ -228,7 +238,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
             fence_id: 0,
             ctx_id: 0,
             ring_idx: 0,
-            padding: 0,
+            padding: [0, 0, 0],
         },
         r: Rect {
             x: 0,
@@ -242,6 +252,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
     };
     zero_hdr(&mut t.hdr);
     t.hdr.type_ = VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D;
+    kprintf(b"virtio-gpu: phase5 TRANSFER\n\0".as_ptr());
     if !submit_ok(
         &mut t as *mut _ as *mut u8,
         core::mem::size_of::<TransferToHost2d>(),
@@ -257,7 +268,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
             fence_id: 0,
             ctx_id: 0,
             ring_idx: 0,
-            padding: 0,
+            padding: [0, 0, 0],
         },
         r: Rect {
             x: 0,
@@ -270,6 +281,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
     };
     zero_hdr(&mut f.hdr);
     f.hdr.type_ = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
+    kprintf(b"virtio-gpu: phase5 FLUSH\n\0".as_ptr());
     if !submit_ok(
         &mut f as *mut _ as *mut u8,
         core::mem::size_of::<ResourceFlush>(),

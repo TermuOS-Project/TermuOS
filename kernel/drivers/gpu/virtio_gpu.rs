@@ -127,8 +127,7 @@ pub extern "C" fn virtio_gpu_rust_probe() {
                     VIRTIO_PCI_CAP_NOTIFY_CFG => {
                         kprintf(b"virtio-gpu: cap notify\n\0".as_ptr());
                         notify_loc = Some(loc);
-                        let mult =
-                            pci_read(dev.bus, dev.slot, dev.func, cap.wrapping_add(16));
+                        let mult = pci_read(dev.bus, dev.slot, dev.func, cap.wrapping_add(16));
                         notify_mult = if mult == 0 { 1 } else { mult };
                     }
                     VIRTIO_PCI_CAP_ISR_CFG => {

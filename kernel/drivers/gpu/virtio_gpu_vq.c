@@ -32,14 +32,17 @@
 #define REQ_OFF (16 * 1024)
 #define RESP_OFF (16 * 1024 + 512)
 
+#define STAGE_OUT_OFF (20 * 1024)
+#define STAGE_IN_OFF (20 * 1024 + 512)
+
 struct virtio_gpu_ctrl_hdr
 {
     uint32_t type;
     uint32_t flags;
     uint64_t fence_id;
     uint32_t ctx_id;
-    uint32_t ring_idx;
-    uint32_t padding;
+    uint8_t ring_idx;
+    uint8_t padding[3];
 } __attribute__((packed));
 
 struct virtio_gpu_rect
@@ -109,6 +112,8 @@ static uint64_t clean_phys(void *v)
 {
     return kvirt_to_phys(v) & 0x000FFFFFFFFFFFFFULL;
 }
+
+int virtio_gpu_submit(void *out, uint32_t out_len, void *in, uint32_t in_len);
 
 /*
  * common = mapped common cfg
@@ -189,81 +194,39 @@ int virtio_gpu_vq_init_and_get_display(volatile uint8_t *common,
 
     g_common = common;
     g_notify = notify;
+    g_notify_mult = notify_mult ? notify_mult : 1;
     g_qsz = qsz;
     g_avail_off = avail_off;
     g_used_off = used_off;
-    kprintf("virtio-gpu: submit ready qsz=%u\n", g_qsz);
+    kprintf("virtio-gpu: submit ready qsz=%u mult=%u\n", g_qsz, g_notify_mult);
 
     /* --- GET_DISPLAY_INFO --- */
-    struct virtio_gpu_ctrl_hdr *req =
-        (struct virtio_gpu_ctrl_hdr *)&qmem[REQ_OFF];
-    struct virtio_gpu_resp_display_info *resp =
-        (struct virtio_gpu_resp_display_info *)&qmem[RESP_OFF];
-
-    for (size_t i = 0; i < sizeof(*req); i++)
-        ((uint8_t *)req)[i] = 0;
-    for (size_t i = 0; i < sizeof(*resp); i++)
-        ((uint8_t *)resp)[i] = 0;
-    req->type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
-
-    struct vring_desc *desc = (struct vring_desc *)&qmem[0];
-    desc[0].addr = clean_phys(req);
-    desc[0].len = (uint32_t)sizeof(*req);
-    desc[0].flags = VRING_DESC_F_NEXT;
-    desc[0].next = 1;
-    desc[1].addr = clean_phys(resp);
-    desc[1].len = (uint32_t)sizeof(*resp);
-    desc[1].flags = VRING_DESC_F_WRITE;
-    desc[1].next = 0;
-
-    kprintf("virtio-gpu: sizeof hdr=%u resp=%u\n",
-            (unsigned)sizeof(*req), (unsigned)sizeof(*resp));
-    kprintf("virtio-gpu: req_phys=%x len0=%u resp_phys=%x len1=%u\n",
-            (uint32_t)desc[0].addr, desc[0].len,
-            (uint32_t)desc[1].addr, desc[1].len);
-
-    uint16_t *avail_idx = (uint16_t *)&qmem[avail_off + 2];
-    uint16_t *avail_ring = (uint16_t *)&qmem[avail_off + 4];
-    uint16_t *used_idx = (uint16_t *)&qmem[used_off + 2];
-
-    uint16_t before = *used_idx;
-    uint16_t aidx = *avail_idx;
-    avail_ring[aidx % qsz] = 0;
-    __sync_synchronize();
-    *avail_idx = (uint16_t)(aidx + 1);
-    __sync_synchronize();
-
-    mmio_w16(common, CFG_QSEL, 0);
-    uint16_t noff = mmio_r16(common, CFG_QNOTIFY);
-    if (notify_mult == 0)
-        notify_mult = 1;
-    kprintf("virtio-gpu: notify_off=%u mult=%u\n", noff, notify_mult);
-
-    volatile uint8_t *naddr = notify + (uint32_t)noff * notify_mult;
-    *(volatile uint16_t *)naddr = 0;
-    *(volatile uint32_t *)naddr = 0;
-    __sync_synchronize();
-
-    for (volatile uint32_t i = 0; i < 50000000u; i++)
     {
-        if (*used_idx != before)
-            break;
-    }
-    if (*used_idx == before)
-    {
-        kprintf("virtio-gpu: phase4 timeout (C) status=0x%x used=%u\n",
-                mmio_r8(common, CFG_STATUS), *used_idx);
-        return -1;
-    }
+        struct virtio_gpu_ctrl_hdr req;
+        struct virtio_gpu_resp_display_info resp;
+        size_t i;
 
-    if (resp->hdr.type != VIRTIO_GPU_RESP_OK_DISPLAY_INFO)
-    {
-        kprintf("virtio-gpu: bad resp type 0x%x\n", resp->hdr.type);
-        return -1;
-    }
+        for (i = 0; i < sizeof(req); i++)
+            ((uint8_t *)&req)[i] = 0;
+        for (i = 0; i < sizeof(resp); i++)
+            ((uint8_t *)&resp)[i] = 0;
+        req.type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
 
-    kprintf("virtio-gpu: phase4 ok %ux%u\n",
-            resp->pmodes[0].r.width, resp->pmodes[0].r.height);
+        int t = virtio_gpu_submit(&req, (uint32_t)sizeof(req),
+                                  &resp, (uint32_t)sizeof(resp));
+        if (t < 0)
+        {
+            kprintf("virtio-gpu: phase4 submit failed\n");
+            return -1;
+        }
+        if ((uint32_t)t != VIRTIO_GPU_RESP_OK_DISPLAY_INFO)
+        {
+            kprintf("virtio-gpu: bad resp type 0x%x\n", (uint32_t)t);
+            return -1;
+        }
+        kprintf("virtio-gpu: phase4 ok %ux%u\n",
+                resp.pmodes[0].r.width, resp.pmodes[0].r.height);
+    }
     return 0;
 }
 
@@ -274,24 +237,30 @@ int virtio_gpu_submit(void *out, uint32_t out_len, void *in, uint32_t in_len)
         kprintf("virtio-gpu: submit: no g_common/notify\n");
         return -1;
     }
-    kprintf("virtio-gpu: submit out=%x in=%x olen=%u ilen=%u\n",
-            (uint32_t)clean_phys(out), (uint32_t)clean_phys(in),
-            out_len, in_len);
+    if (out_len > 512 || in_len > 512)
+        return -1;
+
+    uint8_t *sout = &qmem[STAGE_OUT_OFF];
+    uint8_t *sin = &qmem[STAGE_IN_OFF];
+
+    for (uint32_t i = 0; i < out_len; i++)
+        sout[i] = ((uint8_t *)out)[i];
+    for (uint32_t i = 0; i < in_len; i++)
+        sin[i] = 0;
 
     struct vring_desc *desc = (struct vring_desc *)&qmem[0];
-    /* use desc 0 and 1 for simplicity (single in-flight cmd) */
-    desc[0].addr = clean_phys(out);
+    desc[0].addr = clean_phys(sout);
     desc[0].len = out_len;
     desc[0].flags = VRING_DESC_F_NEXT;
     desc[0].next = 1;
-    desc[1].addr = clean_phys(in);
+    desc[1].addr = clean_phys(sin);
     desc[1].len = in_len;
     desc[1].flags = VRING_DESC_F_WRITE;
     desc[1].next = 0;
 
-    uint16_t *avail_idx = (uint16_t *)&qmem[g_avail_off + 2];
-    uint16_t *avail_ring = (uint16_t *)&qmem[g_avail_off + 4];
-    uint16_t *used_idx = (uint16_t *)&qmem[g_used_off + 2];
+    volatile uint16_t *avail_idx = (volatile uint16_t *)&qmem[g_avail_off + 2];
+    volatile uint16_t *avail_ring = (volatile uint16_t *)&qmem[g_avail_off + 4];
+    volatile uint16_t *used_idx = (volatile uint16_t *)&qmem[g_used_off + 2];
 
     uint16_t before = *used_idx;
     uint16_t aidx = *avail_idx;
@@ -303,15 +272,27 @@ int virtio_gpu_submit(void *out, uint32_t out_len, void *in, uint32_t in_len)
 
     mmio_w16(g_common, CFG_QSEL, 0);
     uint16_t noff = mmio_r16(g_common, CFG_QNOTIFY);
-    volatile uint8_t *naddr = g_notify + (uint32_t)noff * g_notify_mult;
+    uint32_t mult = g_notify_mult ? g_notify_mult : 1;
+    volatile uint8_t *naddr = g_notify + (uint32_t)noff * mult;
     *(volatile uint16_t *)naddr = 0;
     *(volatile uint32_t *)naddr = 0;
 
     for (volatile uint32_t i = 0; i < 50000000u; i++)
         if (*used_idx != before)
             break;
-    if (*used_idx == before)
-        return -1;
 
-    return (int)(*(uint32_t *)in);
+    if (*used_idx == before)
+    {
+        kprintf("virtio-gpu: submit timeout used=%u\n", *used_idx);
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < in_len; i++)
+        ((uint8_t *)in)[i] = sin[i];
+
+    {
+        uint32_t ty = *(uint32_t *)in;
+        kprintf("virtio-gpu: submit got type=0x%x\n", ty);
+        return (int)ty;
+    }
 }
