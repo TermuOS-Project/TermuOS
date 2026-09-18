@@ -118,7 +118,8 @@ SRCS += \
        kernel/drivers/net/pci.c \
        kernel/drivers/net/virtio_net.c \
 	   kernel/drivers/gpu/virtio_gpu_vq.c \
-       kernel/net/net.c
+       kernel/net/net.c \
+	   kernel/drivers/driver.c
 
 SRCS += \
        kernel/drivers/storage/ata.c \

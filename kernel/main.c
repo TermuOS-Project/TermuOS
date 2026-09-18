@@ -22,7 +22,7 @@
 #include "fs/devfs.h"
 #include "drivers/storage/ata.h"
 #include "drivers/net/pci.h"
-#include "drivers/net/virtio_net.h"
+#include "drivers/driver.h"
 #include "shell/shell.h"
 #include "lib/printf.h"
 #include "lib/cxxabi.h"
@@ -149,8 +149,8 @@ void kernel_main(void)
     vfs_mount("/dev", devfs_create());
 
     pci_init();
-    kprintf("virtio_net_init...\n");
-    virtio_net_init();
+    drivers_register_all();
+    drivers_init();
 
     process_t *sp = proc_create("shell");
     if (!sp)

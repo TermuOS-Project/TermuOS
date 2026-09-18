@@ -1,3 +1,12 @@
+#[repr(C)]
+struct Driver {
+    name: *const u8,
+    init: Option<extern "C" fn() -> i32>,
+    priority: i32,
+}
+
+unsafe impl Sync for Driver {}
+
 #[inline(always)]
 unsafe fn outb(port: u16, val: u8) {
     core::arch::asm!(
@@ -70,6 +79,7 @@ pub unsafe extern "C" fn rtc_rust_read(hour: *mut u8, min: *mut u8, sec: *mut u8
 
 extern "C" {
     fn kprintf(fmt: *const u8, ...);
+    fn driver_register(d: *const Driver);
 }
 
 #[no_mangle]
@@ -86,4 +96,20 @@ pub extern "C" fn rtc_rust_init() {
             s as u32,
         );
     }
+}
+
+extern "C" fn rtc_driver_init() -> i32 {
+    rtc_rust_init();
+    0
+}
+
+static DRIVER: Driver = Driver {
+    name: b"rtc-rust\0".as_ptr(),
+    init: Some(rtc_driver_init),
+    priority: 20,
+};
+
+#[no_mangle]
+pub unsafe extern "C" fn rtc_driver_register() {
+    driver_register(&DRIVER);
 }

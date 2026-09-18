@@ -5,6 +5,7 @@
 #include "../../mm/pmm.h"
 #include "../../mm/vmm.h"
 #include "../../lib/printf.h"
+#include "../driver.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -416,4 +417,19 @@ int virtio_net_init(void)
     net_init();
     kprintf("virtio-net: done\n");
     return 0;
+}
+
+static int virtio_net_driver_init(void)
+{
+    return virtio_net_init();
+}
+
+void virtio_net_register(void)
+{
+    static const driver_t d = {
+        .name = "virtio-net",
+        .init = virtio_net_driver_init,
+        .priority = 50,
+    };
+    driver_register(&d);
 }
