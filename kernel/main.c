@@ -118,11 +118,8 @@ void kernel_main(void)
     ata_ioman_register();
     keyboard_ioman_register();
 
-    rtc_rust_init();
     crc32_selftest();
     rdrand_selftest();
-
-    virtio_gpu_rust_probe();
 
     if (tfs_mount() == 0)
     {

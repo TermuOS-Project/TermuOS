@@ -41,6 +41,7 @@ extern "C" {
         notify_mult: u32,
     ) -> i32;
     fn virtio_gpu_phase5_rust() -> i32;
+    fn driver_register(d: *const GpuDriver);
 }
 
 unsafe fn pci_read8(bus: u8, slot: u8, func: u8, off: u8) -> u8 {
@@ -200,4 +201,31 @@ pub extern "C" fn virtio_gpu_rust_probe() {
             let _ = virtio_gpu_phase5_rust();
         }
     }
+}
+
+#[repr(C)]
+struct GpuDriver {
+    name: *const u8,
+    init: Option<extern "C" fn() -> i32>,
+    priority: i32,
+}
+
+unsafe impl Sync for GpuDriver {}
+
+extern "C" fn virtio_gpu_driver_init() -> i32 {
+    unsafe {
+        virtio_gpu_rust_probe();
+    }
+    0
+}
+
+static GPU_DRIVER: GpuDriver = GpuDriver {
+    name: b"virtio-gpu\0".as_ptr(),
+    init: Some(virtio_gpu_driver_init),
+    priority: 40,
+};
+
+#[no_mangle]
+pub unsafe extern "C" fn virtio_gpu_driver_register() {
+    driver_register(&GPU_DRIVER as *const GpuDriver as *const _);
 }
