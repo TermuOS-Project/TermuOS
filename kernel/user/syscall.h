@@ -13,6 +13,9 @@
 #define SYS_MMAP 9
 #define SYS_MUNMAP 11
 #define SYS_BRK 12
+#define SYS_YIELD 24   /* sched_yield */
+#define SYS_SLEEP 35   /* nanosleep */
+#define SYS_GETPID 39
 #define SYS_FB_INFO 50
 #define SYS_FB_CLEAR 51
 #define SYS_FB_FILL_RECT 52
@@ -20,9 +23,6 @@
 #define SYS_SPAWN 57
 #define SYS_EXIT 60
 #define SYS_WAIT 61
-#define SYS_GETPID 39
-#define SYS_YIELD 24   /* sched_yield */
-#define SYS_SLEEP 35   /* nanosleep */
 #define SYS_UPTIME 201
 #define SYS_PORT_FIND 300
 #define SYS_PORT_SEND 301
