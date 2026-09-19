@@ -5,6 +5,7 @@
 #include "../drivers/serial/serial.h"
 #include "../drivers/video/fb.h"
 #include "../drivers/input/keyboard.h"
+#include "../drivers/input/mouse.h"
 #include "../drivers/driver.h"
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
@@ -657,6 +658,33 @@ static uint64_t sys_lsdrv(uint64_t user_buf, uint64_t max)
     return (uint64_t)n;
 }
 
+static long sys_kbd_haschar(void)
+{
+    return keyboard_haschar() ? 1 : 0;
+}
+
+static long sys_kbd_getchar(void)
+{
+    if (!keyboard_haschar())
+        return -1;
+    return (long)(unsigned char)keyboard_getchar();
+}
+
+static long sys_mouse_get_state(uint64_t user_addr)
+{
+    process_t *proc = cur_proc();
+    mouse_state_t st;
+
+    if (!proc || !user_addr)
+        return -1;
+
+    mouse_get_state(&st);
+
+    if (copy_to_user(proc, user_addr, &st, sizeof(st)) < 0)
+        return -1;
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
@@ -711,6 +739,12 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_wait(a);
     case SYS_LSDRV:
         return sys_lsdrv(a, b);
+    case SYS_KBD_HASCHAR:
+        return sys_kbd_haschar();
+    case SYS_KBD_GETCHAR:
+        return sys_kbd_getchar();
+    case SYS_MOUSE_GET_STATE:
+        return sys_mouse_get_state(a);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;

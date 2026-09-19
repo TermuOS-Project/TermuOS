@@ -20,6 +20,9 @@
 #define SYS_FB_CLEAR 51
 #define SYS_FB_FILL_RECT 52
 #define SYS_FB_PUTPIXEL 53
+#define SYS_KBD_HASCHAR 54
+#define SYS_KBD_GETCHAR 55
+#define SYS_MOUSE_GET_STATE 56
 #define SYS_SPAWN 57
 #define SYS_EXIT 60
 #define SYS_WAIT 61

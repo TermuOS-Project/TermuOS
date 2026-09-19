@@ -33,3 +33,18 @@ void exit(int code)
 {
     _exit(code);
 }
+
+int kbd_haschar(void)
+{
+    return (int)__syscall0(SYS_KBD_HASCHAR);
+}
+
+int kbd_getchar(void)
+{
+    return (int)__syscall0(SYS_KBD_GETCHAR);
+}
+
+int mouse_get_state(struct mouse_state *out)
+{
+    return (int)__syscall1(SYS_MOUSE_GET_STATE, (long)out);
+}
