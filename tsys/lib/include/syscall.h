@@ -4,6 +4,10 @@
 #define SYS_WRITE 1
 #define SYS_OPEN 2
 #define SYS_CLOSE 3
+#define SYS_FB_INFO 50
+#define SYS_FB_CLEAR 51
+#define SYS_FB_FILL_RECT 52
+#define SYS_FB_PUTPIXEL 53
 #define SYS_EXIT 60
 #define SYS_LSDRV 501
 
@@ -20,3 +24,4 @@ long __syscall0(long n);
 long __syscall1(long n, long a);
 long __syscall2(long n, long a, long b);
 long __syscall3(long n, long a, long b, long c);
+long __syscall5(long n, long a, long b, long c, long d, long e);
