@@ -224,7 +224,9 @@ TSYS_HDRS := $(wildcard tsys/lib/include/*.h)
 TSYS_LIB_SRCS := \
 	tsys/lib/src/syscall.c \
 	tsys/lib/src/unistd.c \
-	tsys/lib/src/string.c
+	tsys/lib/src/string.c \
+	tsys/lib/src/fb.c \
+	tsys/lib/src/input.c
 
 TSYS_LIB_OBJS := $(patsubst tsys/lib/src/%.c,$(TSYS_OUT)/lib/%.o,$(TSYS_LIB_SRCS))
 
