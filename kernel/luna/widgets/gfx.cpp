@@ -43,7 +43,7 @@ uint32_t Gfx::get_pixel(int x, int y)
 {
     if (x < 0 || y < 0 || x >= w_ || y >= h_)
         return 0;
-    return fb_getpixel((uint64_t)x, (uint64_t)y);
+    return (uint32_t)::fb_getpixel((uint32_t)x, (uint32_t)y);
 }
 
 uint32_t Gfx::rgb(uint8_t r, uint8_t g, uint8_t b)

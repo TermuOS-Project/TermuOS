@@ -598,8 +598,7 @@ static long sys_fb_putpixel(uint64_t x, uint64_t y, uint32_t colour)
 
 static long sys_fb_getpixel(uint64_t x, uint64_t y)
 {
-    fb_getpixel(x, y);
-    return 0;
+    return (long)(uint32_t)fb_getpixel(x, y);
 }
 
 static uint64_t sys_spawn(uint64_t path_addr)
