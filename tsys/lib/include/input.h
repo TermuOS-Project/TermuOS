@@ -14,3 +14,4 @@ int kbd_haschar(void);
 int kbd_getchar(void);
 
 int mouse_get_state(struct mouse_state *out);
+int mouse_set_bounds(int w, int h);

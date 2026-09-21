@@ -691,6 +691,12 @@ static long sys_mouse_get_state(uint64_t user_addr)
     return 0;
 }
 
+static long sys_mouse_set_bounds(uint64_t w, uint64_t h)
+{
+    mouse_set_bounds((int)w, (int)h);
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
@@ -753,6 +759,8 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_mouse_get_state(a);
     case SYS_FB_GETPIXEL:
         return sys_fb_getpixel(a, b);
+    case SYS_MOUSE_SET_BOUNDS:
+        return sys_mouse_set_bounds(a, b);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;

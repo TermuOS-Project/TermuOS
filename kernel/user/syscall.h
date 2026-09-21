@@ -25,6 +25,7 @@
 #define SYS_MOUSE_GET_STATE 56
 #define SYS_SPAWN 57
 #define SYS_FB_GETPIXEL 58
+#define SYS_MOUSE_SET_BOUNDS 59
 #define SYS_EXIT 60
 #define SYS_WAIT 61
 #define SYS_UPTIME 201

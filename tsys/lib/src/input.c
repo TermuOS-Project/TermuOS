@@ -15,3 +15,8 @@ int mouse_get_state(struct mouse_state *out)
 {
     return (int)__syscall1(SYS_MOUSE_GET_STATE, (long)out);
 }
+
+int mouse_set_bounds(int w, int h)
+{
+    return (int)__syscall2(SYS_MOUSE_SET_BOUNDS, w, h);
+}
