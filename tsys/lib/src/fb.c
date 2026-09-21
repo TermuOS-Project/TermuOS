@@ -21,3 +21,8 @@ int fb_putpixel(uint32_t x, uint32_t y, uint32_t colour)
 {
     return (int)__syscall3(SYS_FB_PUTPIXEL, (long)x, (long)y, (long)colour);
 }
+
+int fb_getpixel(uint32_t x, uint32_t y)
+{
+    return (int)__syscall2(SYS_FB_GETPIXEL, (long)x, (long y));
+}

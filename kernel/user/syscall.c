@@ -596,6 +596,12 @@ static long sys_fb_putpixel(uint64_t x, uint64_t y, uint32_t colour)
     return 0;
 }
 
+static long sys_fb_getpixel(uint64_t x, uint64_t y)
+{
+    fb_getpixel(x, y);
+    return 0;
+}
+
 static uint64_t sys_spawn(uint64_t path_addr)
 {
     if (!path_addr)
@@ -745,6 +751,8 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_kbd_getchar();
     case SYS_MOUSE_GET_STATE:
         return sys_mouse_get_state(a);
+    case SYS_FB_GETPIXEL:
+        return sys_fb_getpixel(a, b);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;
