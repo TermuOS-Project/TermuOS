@@ -243,7 +243,8 @@ TSYS_LIB_SRCS := \
 	tsys/lib/src/unistd.c \
 	tsys/lib/src/string.c \
 	tsys/lib/src/fb.c \
-	tsys/lib/src/input.c
+	tsys/lib/src/input.c \
+	tsys/lib/src/rtc.c
 
 TSYS_LIB_OBJS := $(patsubst tsys/lib/src/%.c,$(TSYS_OUT)/lib/%.o,$(TSYS_LIB_SRCS))
 

@@ -15,6 +15,7 @@
 #define SYS_FB_GETPIXEL 58
 #define SYS_MOUSE_SET_BOUNDS 59
 #define SYS_EXIT 60
+#define SYS_RTC_READ 62
 #define SYS_LSDRV 501
 
 /* Must match kernel/fs/vfs.h — these go straight to vfs_open(). They are

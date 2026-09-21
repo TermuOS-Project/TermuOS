@@ -7,6 +7,7 @@
 #include "../drivers/input/keyboard.h"
 #include "../drivers/input/mouse.h"
 #include "../drivers/driver.h"
+#include "../drivers/rtc/rtc.h"
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
 #include "../mm/pmm.h"
@@ -696,6 +697,21 @@ static long sys_mouse_set_bounds(uint64_t w, uint64_t h)
     return 0;
 }
 
+static long sys_rtc_read(uint64_t user_addr)
+{
+    process_t *proc = cur_proc();
+    rtc_time_t t;
+
+    if (!proc || !user_addr)
+        return -1;
+
+    rtc_read(&t);
+
+    if (copy_to_user(proc, user_addr, &t, sizeof(t)) < 0)
+        return -1;
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
@@ -760,6 +776,8 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_fb_getpixel(a, b);
     case SYS_MOUSE_SET_BOUNDS:
         return sys_mouse_set_bounds(a, b);
+    case SYS_RTC_READ:
+        return sys_rtc_read(a);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;
