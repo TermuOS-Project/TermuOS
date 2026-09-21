@@ -39,7 +39,7 @@ quiet_LD  = $(Q)printf "  ${C_LD}[LD]${C_RESET}   %s\n" "$@";
 # ---------------------------------------------------------------------------
 # Default goal FIRST
 # ---------------------------------------------------------------------------
-.PHONY: all iso run clean tsys tsys-clean tsys-install test test-img
+.PHONY: all iso run clean tsys tsys-clean tsys-install usr usr-clean luna test test-img
 
 all: iso
 
@@ -205,6 +205,23 @@ disk.img: tools/mkfs_tfs
 	@./tools/mkfs_tfs disk.img 64
 
 # ---------------------------------------------------------------------------
+# usr/ — userspace projects (Luna submodule, etc.)
+# ---------------------------------------------------------------------------
+LUNA_DIR := usr/src/luna
+LUNA_BIN := $(LUNA_DIR)/luna.tsys
+
+.PHONY: luna
+luna: $(TSYS_LIB_A)
+	$(Q)printf "  [USR]   luna\n"
+	$(Q)$(MAKE) -C $(LUNA_DIR) TERMUOS_ROOT=$(CURDIR)
+
+# Future: other usr packages go here and as dependencies of `usr`
+usr: tsys luna
+
+usr-clean:
+	$(Q)$(MAKE) -C $(LUNA_DIR) clean || true
+
+# ---------------------------------------------------------------------------
 # tsys userspace + libtsys
 # ---------------------------------------------------------------------------
 TSYS_CC      := gcc
@@ -274,7 +291,7 @@ tsys-clean:
 	rm -rf $(TSYS_OUT)
 
 # Requires existing TFS disk.img (make disk.img once after mkfs)
-tsys-install: tsys tools/tfs_write $(DISK_IMG)
+tsys-install: tsys luna tools/tfs_write $(DISK_IMG)
 	$(Q)printf "  [INST]  /bin/echo.tsys\n"
 	$(Q)$(TFS_WRITE) $(DISK_IMG) $(TSYS_OUT)/echo.tsys /bin/echo.tsys
 	$(Q)printf "  [INST]  /bin/uname.tsys\n"
@@ -285,6 +302,8 @@ tsys-install: tsys tools/tfs_write $(DISK_IMG)
 	$(Q)$(TFS_WRITE) $(DISK_IMG) $(TSYS_OUT)/edit.tsys /bin/edit.tsys
 	$(Q)printf "  [INST]  /bin/lsdrv.tsys\n"
 	$(Q)$(TFS_WRITE) $(DISK_IMG) $(TSYS_OUT)/lsdrv.tsys /bin/lsdrv.tsys
+	$(Q)printf "  [INST]  /bin/luna.tsys\n"
+	$(Q)$(TFS_WRITE) $(DISK_IMG) $(LUNA_BIN) /bin/luna.tsys
 
 # ---------------------------------------------------------------------------
 # Tests: boot under QEMU and check the userland from the shell
@@ -341,3 +360,4 @@ limine:
 
 clean:
 	@rm -rf $(BUILD_DIR) $(KERNEL) termuos.iso iso/ disk.img test.img tests-serial.log
+	@$(MAKE) -C $(LUNA_DIR) clean 2>/dev/null || true
