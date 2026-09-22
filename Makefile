@@ -279,12 +279,16 @@ $(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDR
 	$(Q)printf "  [TSYS]  lsdrv.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TSYS_LIB_A)
 
+$(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+	$(Q)printf "  [TSYS]  help.tsys\n"
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/help/help.c $(TSYS_LIB_A)
+
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
 #	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TSYS_LIB_A)
 
-TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys
+TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys
 
 tsys: $(TSYS_BINS)
 
@@ -305,6 +309,8 @@ tsys-install: tsys luna tools/tfs_write $(DISK_IMG)
 	$(Q)$(TFS_WRITE) $(DISK_IMG) $(TSYS_OUT)/lsdrv.tsys /bin/lsdrv.tsys
 	$(Q)printf "  [INST]  /bin/luna.tsys\n"
 	$(Q)$(TFS_WRITE) $(DISK_IMG) $(LUNA_BIN) /bin/luna.tsys
+	$(Q)printf "  [INST]  /bin/help.tsys\n"
+	$(Q)$(TFS_WRITE) $(DISK_IMG) $(TSYS_OUT)/help.tsys /bin/help.tsys
 
 # ---------------------------------------------------------------------------
 # Tests: boot under QEMU and check the userland from the shell
