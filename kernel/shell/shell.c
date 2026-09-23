@@ -9,6 +9,7 @@
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
 #include "../fs/tfs.h"
+#include "../fs/install.h"
 #include "../net/net.h"
 #include "../user/syscall.h"
 #include "../proc/process.h"
@@ -831,6 +832,12 @@ static void cmd_run(int argc, char **argv)
     }
 }
 
+static void cmd_install(int argc, char **argv)
+{
+    (void)argc; (void)argv;
+    install_bin_from_modules();
+}
+
 static int shell_exec_path(const char *path)
 {
     uint32_t type;
@@ -944,6 +951,7 @@ static const command_t commands[] = {
     {"ps", cmd_ps},
     {"kill", cmd_kill},
     {"luna", cmd_luna},
+    {"install", cmd_install},
     {NULL, NULL}};
 
 static void dispatch(char *line)

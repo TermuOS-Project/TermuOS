@@ -129,7 +129,8 @@ SRCS += \
        kernel/fs/vfs.c \
        kernel/fs/ramfs.c \
        kernel/fs/tfs.c \
-       kernel/fs/devfs.c
+       kernel/fs/devfs.c \
+	   kernel/fs/install.c
 
 SRCS += kernel/shell/shell.c
 SRCS += \
