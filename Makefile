@@ -170,9 +170,9 @@ $(BUILD_DIR)/%.o: %.rs
 $(KERNEL): $(OBJS)
 	$(quiet_LD) $(LD) -T kernel/arch/x86_64/linker.ld -nostdlib -m elf_x86_64 -o $@ $(OBJS)
 
-iso: $(KERNEL)
+iso: $(KERNEL) tsys luna
 	@rm -rf iso
-	@mkdir -p iso/boot
+	@mkdir -p iso/boot/bin
 	@cp $(KERNEL) iso/boot/kernel.elf
 	@cp limine/limine-bios.sys iso/boot/
 	@cp limine/limine-bios-cd.bin iso/boot/
@@ -182,9 +182,15 @@ iso: $(KERNEL)
 	@mkdir -p iso/boot/icons
 	@cp assets/icons/*.rgba iso/boot/icons/ 2>/dev/null || true
 	@cp assets/logo.png iso/boot/ 2>/dev/null || true
-	@mkdir -p iso/boot/bin
-		@cp $(TSYS_BINS) iso/boot/bin/ 2>/dev/null || true
-		@cp usr/src/luna/luna.tsys iso/boot/bin/ 2>/dev/null || true
+	@# userspace payload (install media)
+	$(Q)for b in $(TSYS_BINS); do \
+		printf "  [ISO]   boot/bin/$$(basename $$b)\n"; \
+		cp $$b iso/boot/bin/; \
+	done
+	$(Q)if [ -f $(LUNA_BIN) ]; then \
+		printf "  [ISO]   boot/bin/luna.tsys\n"; \
+		cp $(LUNA_BIN) iso/boot/bin/; \
+	fi
 	@xorriso -as mkisofs \
 		-b boot/limine-bios-cd.bin \
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -357,7 +363,7 @@ test: iso test-img
 # ---------------------------------------------------------------------------
 # Run: ISO + disk + install tsys into the image
 # ---------------------------------------------------------------------------
-run: iso $(DISK_IMG) tools/tfs_write tsys-install
+run: iso $(DISK_IMG)
 	@qemu-system-x86_64 -cdrom termuos.iso -cpu qemu64,+syscall -m 125M \
 		-netdev user,id=net0 \
 		-device virtio-net-pci,netdev=net0,disable-modern=on \
