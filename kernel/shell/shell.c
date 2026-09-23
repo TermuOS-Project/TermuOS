@@ -299,9 +299,13 @@ static void cmd_mem(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
-    size_t f = pmm_free_pages(), t = pmm_total_pages(), u = t - f;
-    kprintf("Total:%uMB Used:%uMB Free:%uMB\n",
-            (t * 4096) / (1024 * 1024), (u * 4096) / (1024 * 1024), (f * 4096) / (1024 * 1024));
+    size_t free_pages = pmm_free_pages();
+    size_t total_pages = pmm_physical_pages();
+    size_t used_pages = total_pages - free_pages;
+    kprintf("Total: %uMB Used: %uMB Free: %uMB\n",
+            (total_pages * PAGE_SIZE) / (1024 * 1024),
+            (used_pages * PAGE_SIZE) / (1024 * 1024),
+            (free_pages * PAGE_SIZE) / (1024 * 1024));
 }
 
 static void cmd_threads(int argc, char **argv)

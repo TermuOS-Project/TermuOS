@@ -19,6 +19,7 @@ static size_t bm_size = 0;           // number of uint64_t entries in bitmap
 static size_t total_pages = 0;
 static size_t free_pages = 0;
 static uint64_t highest_addr = 0; // highest usable physical address
+static uint64_t physical_end = 0; // end of the contiguous RAM map
 
 // The bitmap must always be dereferenced through the HHDM mapping, never as
 // a raw physical pointer. Limine identity-maps low physical memory only in
@@ -58,11 +59,33 @@ void pmm_init(struct limine_memmap_response *memmap)
     for (uint64_t i = 0; i < memmap->entry_count; i++)
     {
         struct limine_memmap_entry *e = memmap->entries[i];
+        uint64_t end = e->base + e->length;
+        if (e->type == LIMINE_MEMMAP_USABLE ||
+            e->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE ||
+            e->type == LIMINE_MEMMAP_ACPI_NVS ||
+            e->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE ||
+            e->type == LIMINE_MEMMAP_KERNEL_AND_MODULES)
+        {
+            if (end > physical_end)
+                physical_end = end;
+        }
         if (e->type == LIMINE_MEMMAP_USABLE)
         {
-            uint64_t end = e->base + e->length;
             if (end > highest_addr)
                 highest_addr = end;
+        }
+    }
+
+    // Include the reserved tail immediately following RAM, but stop before
+    // unrelated high-address firmware and device ranges.
+    for (uint64_t i = 0; i < memmap->entry_count; i++)
+    {
+        struct limine_memmap_entry *e = memmap->entries[i];
+        if (e->base == physical_end && e->type != LIMINE_MEMMAP_BAD_MEMORY &&
+            e->type != LIMINE_MEMMAP_FRAMEBUFFER)
+        {
+            physical_end = e->base + e->length;
+            i = 0;
         }
     }
 
@@ -160,3 +183,7 @@ void pmm_free(void *addr)
 
 size_t pmm_free_pages(void) { return free_pages; }
 size_t pmm_total_pages(void) { return total_pages; }
+size_t pmm_physical_pages(void)
+{
+    return (physical_end + PAGE_SIZE - 1) / PAGE_SIZE;
+}

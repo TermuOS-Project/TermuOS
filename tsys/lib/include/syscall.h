@@ -4,18 +4,20 @@
 #define SYS_WRITE 1
 #define SYS_OPEN 2
 #define SYS_CLOSE 3
+#define SYS_STAT 4
 #define SYS_YIELD 24
 #define SYS_FB_INFO 50
 #define SYS_FB_CLEAR 51
 #define SYS_FB_FILL_RECT 52
 #define SYS_FB_PUTPIXEL 53
-#define SYS_KBD_HASCHAR     54
-#define SYS_KBD_GETCHAR     55
+#define SYS_KBD_HASCHAR 54
+#define SYS_KBD_GETCHAR 55
 #define SYS_MOUSE_GET_STATE 56
 #define SYS_FB_GETPIXEL 58
 #define SYS_MOUSE_SET_BOUNDS 59
 #define SYS_EXIT 60
 #define SYS_RTC_READ 62
+#define SYS_READDIR 63
 #define SYS_LSDRV 501
 
 /* Must match kernel/fs/vfs.h — these go straight to vfs_open(). They are

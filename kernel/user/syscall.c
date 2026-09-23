@@ -712,9 +712,54 @@ static long sys_rtc_read(uint64_t user_addr)
     return 0;
 }
 
+static long sys_readdir(uint64_t fd, uint64_t idx, uint64_t name_uva)
+{
+    process_t *proc = cur_proc();
+    char name[VFS_NAME_MAX];
+
+    if (!proc || fd >= VFS_MAX_FDS)
+        return -1;
+
+    if (vfs_readdir((int)fd, (uint32_t)idx, name) != 0)
+        return -1;
+
+    if (copy_to_user(proc, name_uva, name, VFS_NAME_MAX) < 0)
+        return -1;
+    return 0;
+}
+
+struct user_stat
+{
+    uint32_t type;
+    uint64_t size;
+};
+
+static long sys_stat_path(uint64_t path_uva, uint64_t st_uva)
+{
+    process_t *proc = cur_proc();
+    char path[VFS_PATH_MAX];
+    struct user_stat st;
+    uint32_t type = 0;
+    uint64_t size = 0;
+
+    if (!proc)
+        return -1;
+    if (copy_user_str(proc, path, path_uva, sizeof path) < 0)
+        return -1;
+    if (vfs_stat(path, &type, &size) < 0)
+        return -1;
+
+    st.type = type;
+    st.size = size;
+    if (copy_to_user(proc, st_uva, &st, sizeof st) < 0)
+        return -1;
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
-uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
+uint64_t
+syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
 {
     switch (num)
     {
@@ -778,6 +823,10 @@ uint64_t syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint
         return sys_mouse_set_bounds(a, b);
     case SYS_RTC_READ:
         return sys_rtc_read(a);
+    case SYS_READDIR:
+        return sys_readdir(a, b, c);
+    case 4:
+        return sys_stat_path(a, b);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;

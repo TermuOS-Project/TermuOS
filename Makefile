@@ -354,7 +354,7 @@ test: iso test-img
 # Run: ISO + disk + install tsys into the image
 # ---------------------------------------------------------------------------
 run: iso $(DISK_IMG) tools/tfs_write tsys-install
-	@qemu-system-x86_64 -cdrom termuos.iso -cpu qemu64,+syscall \
+	@qemu-system-x86_64 -cdrom termuos.iso -cpu qemu64,+syscall -m 125M \
 		-netdev user,id=net0 \
 		-device virtio-net-pci,netdev=net0,disable-modern=on \
 		-device virtio-gpu-pci \
