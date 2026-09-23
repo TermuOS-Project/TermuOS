@@ -117,6 +117,7 @@ This project is licensed under the **MIT License**.
 
 <p align="center">
   <b>Made with ❤️ by TermuOS Team</b>
+  <br>
   <b>Since 2022</b>
   <br><br>
   <a href="https://github.com/TermuOS-Project/TermuOS">GitHub</a> •
