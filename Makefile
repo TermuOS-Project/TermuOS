@@ -182,6 +182,9 @@ iso: $(KERNEL)
 	@mkdir -p iso/boot/icons
 	@cp assets/icons/*.rgba iso/boot/icons/ 2>/dev/null || true
 	@cp assets/logo.png iso/boot/ 2>/dev/null || true
+	@mkdir -p iso/boot/bin
+		@cp $(TSYS_BINS) iso/boot/bin/ 2>/dev/null || true
+		@cp usr/src/luna/luna.tsys iso/boot/bin/ 2>/dev/null || true
 	@xorriso -as mkisofs \
 		-b boot/limine-bios-cd.bin \
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -244,7 +247,8 @@ TSYS_LIB_SRCS := \
 	tsys/lib/src/string.c \
 	tsys/lib/src/fb.c \
 	tsys/lib/src/input.c \
-	tsys/lib/src/rtc.c
+	tsys/lib/src/rtc.c \
+	tsys/lib/src/dirent.c
 
 TSYS_LIB_OBJS := $(patsubst tsys/lib/src/%.c,$(TSYS_OUT)/lib/%.o,$(TSYS_LIB_SRCS))
 

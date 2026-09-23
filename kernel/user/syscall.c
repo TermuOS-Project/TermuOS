@@ -825,7 +825,7 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_rtc_read(a);
     case SYS_READDIR:
         return sys_readdir(a, b, c);
-    case 4:
+    case SYS_STAT:
         return sys_stat_path(a, b);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
