@@ -79,19 +79,6 @@ SRCS += \
        kernel/lib/string.c
 
 CPPSRCS += kernel/lib/cxxabi.cpp
-CPPSRCS += kernel/luna/widgets/gfx.cpp
-CPPSRCS += kernel/luna/widgets/button.cpp
-CPPSRCS += kernel/luna/widgets/window.cpp
-CPPSRCS += kernel/luna/luna.cpp
-CPPSRCS += kernel/luna/focus.cpp
-CPPSRCS += kernel/luna/widgets/textfield.cpp
-CPPSRCS += kernel/luna/desktop/startmenu/startmenu.cpp
-CPPSRCS += kernel/luna/apps/registry.cpp
-CPPSRCS += kernel/luna/apps/about.cpp
-CPPSRCS += kernel/luna/apps/terminal.cpp
-CPPSRCS += kernel/luna/apps/widgets.cpp
-CPPSRCS += kernel/luna/apps/settings.cpp
-CPPSRCS += kernel/luna/apps/explorer.cpp
 
 SRCS += \
        kernel/drivers/input/keyboard.c \
@@ -99,7 +86,6 @@ SRCS += \
        kernel/sched/scheduler.c
 
 SRCS += kernel/proc/process.c
-SRCS += kernel/luna/icon.c
 SRCS += kernel/ob/object.c
 SRCS += kernel/io/ioman.c
 SRCS += kernel/drivers/storage/ata_ioman.c

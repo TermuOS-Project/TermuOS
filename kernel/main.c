@@ -36,8 +36,6 @@
 #include "proc/launch.h"
 #include "user/userspace.h"
 
-#include "luna/luna.h"
-
 LIMINE_BASE_REVISION(3);
 
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER
