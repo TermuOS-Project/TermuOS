@@ -20,6 +20,7 @@
 #include "fs/ramfs.h"
 #include "fs/tfs.h"
 #include "fs/devfs.h"
+#include "fs/install.h"
 #include "drivers/storage/ata.h"
 #include "drivers/net/pci.h"
 #include "drivers/driver.h"
@@ -128,6 +129,7 @@ void kernel_main(void)
         vfs_mkdir("/etc");
         vfs_mkdir("/home");
         vfs_mkdir("/home/root");
+        install_bin_if_needed();
     }
     else
     {

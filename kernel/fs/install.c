@@ -87,3 +87,33 @@ int install_bin_from_modules(void)
     kprintf("install: %d binaries\n", n);
     return n > 0 ? 0 : -1;
 }
+
+static int bin_is_empty(void)
+{
+    int fd = vfs_open("/bin", O_RDONLY);
+    if (fd < 0)
+        return 1;
+
+    char name[VFS_NAME_MAX];
+    int any = 0;
+    for (uint32_t i = 0; i < 64; i++) {
+        if (vfs_readdir(fd, i, name) != 0)
+            break;
+        if (name[0] == '.')
+            continue;
+        any = 1;
+        break;
+    }
+    vfs_close(fd);
+    return !any;
+}
+
+int install_bin_if_needed(void)
+{
+    if (!bin_is_empty()) {
+        kprintf("install: /bin already populated, skip\n");
+        return 0;
+    }
+    kprintf("install: /bin empty - installing from ISO modules\n");
+    return install_bin_from_modules();
+}
