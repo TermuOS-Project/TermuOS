@@ -280,12 +280,16 @@ $(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) 
 	$(Q)printf "  [TSYS]  help.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/help/help.c $(TSYS_LIB_A)
 
+$(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+	$(Q)printf "  [TSYS]  fetch.tsys\n"
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/fetch/fetch.c $(TSYS_LIB_A)
+
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
 #	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TSYS_LIB_A)
 
-TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys
+TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys
 
 tsys: $(TSYS_BINS)
 

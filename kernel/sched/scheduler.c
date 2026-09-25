@@ -76,7 +76,6 @@ thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
     *--sp = 0; // r15
     t->rsp = (uint64_t)sp;
 
-    kprintf("Scheduler: created thread %d '%s'\n", slot, t->name);
     char ob_path[32];
     const char *prefix = "\\Thread\\";
     int pi = 0;

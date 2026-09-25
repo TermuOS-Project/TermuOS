@@ -795,9 +795,6 @@ static void cmd_run(int argc, char **argv)
         return;
     }
 
-    // exec the ELF directly (full permissions - no manifest to read them from)
-    kprintf("run: launching %s\n", path);
-
     char *av[MAX_ARGS];
     int ac = 0;
 
@@ -838,7 +835,6 @@ static int shell_exec_path(const char *path)
     if (type != VFS_FILE)
         return -1;
 
-    kprintf("run: launching %s\n", path);
     int pid = exec_launch(path, 0xffffffff);
     if (pid < 0)
         return -1;
@@ -892,7 +888,6 @@ static int shell_try_tsys(int argc, char **argv)
         av[ac++] = argv[j];
     av[ac] = 0;
 
-    kprintf("run: launching %s\n", path);
     int pid = exec_launch_args(path, 0xffffffff, ac, av);
     if (pid < 0)
         return -1;
@@ -975,7 +970,7 @@ void print_prompt(void)
 void shell_run(void)
 {
     char input[INPUT_MAX];
-    kprintf("\nTermuOS 0.1.0 -- type 'help' for commands.\n\n");
+    kprintf("\nTermuOS 1.0.0 -- type 'help' for commands.\n\n");
     while (1)
     {
         print_prompt();

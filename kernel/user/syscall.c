@@ -239,8 +239,6 @@ static uint64_t sys_exit(uint64_t code)
     thread_t *t = thread_current();
     process_t *proc = t ? t->owner : NULL;
 
-    kprintf("[kernel] process exited: %d\n", (int)code);
-
     if (proc && proc != proc_kernel())
         proc_exit(proc, (int32_t)code);
 

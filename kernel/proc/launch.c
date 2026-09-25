@@ -13,18 +13,12 @@ static void exec_thread_entry()
   thread_t *self = thread_current();
   launch_ctx_t *ctx = (launch_ctx_t *)self->owner->ob_header->body;
 
-  kprintf("exec: thread running, entry=0x%x stack=0x%x pm=0x%x\n",
-          ctx->entry, ctx->stack_top, (uint64_t)ctx->pagemap);
-
   proc_set_perm_mask(ctx->perm_mask);
 
-  kprintf("exec: about to vmm_switch\n");
   vmm_switch(ctx->pagemap);
 
-  kprintf("exec: about to jump_userspace\n");
   jump_userspace(ctx->entry, ctx->stack_top);
 
-  kprintf("exec: thread entry returned\n");
   thread_exit();
 }
 
@@ -90,8 +84,6 @@ int exec_launch_args(const char *vfs_path, uint32_t perm_mask,
     return -1;
   }
 
-  kprintf("exec: scheduled '%s' (pid %u, tid %u)\n",
-          name, proc->pid, (uint32_t)t->id);
   return (int)proc->pid;
 }
 

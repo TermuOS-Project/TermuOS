@@ -111,7 +111,6 @@ process_t *proc_create(const char *name)
   }
   p->name[n] = '\0';
 
-  kprintf("proc: create process %u '%s'\n", p->pid, p->name);
   return p;
 }
 
@@ -122,8 +121,6 @@ void proc_exit(process_t *proc, int32_t code)
 
   proc->exit_code = code;
   proc->state = PROC_ZOMBIE;
-  kprintf("proc: process %u '%s' exited with code %d\n",
-          proc->pid, proc->name, code);
 
   for (int i = 0; i < MAX_HANDLES; i++)
     handle_close(&proc->handles, i);

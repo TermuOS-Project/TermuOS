@@ -18,6 +18,7 @@
 #define SYS_EXIT 60
 #define SYS_RTC_READ 62
 #define SYS_READDIR 63
+#define SYS_UPTIME 201
 #define SYS_LSDRV 501
 
 /* Must match kernel/fs/vfs.h — these go straight to vfs_open(). They are

@@ -290,9 +290,6 @@ int exec_load(const char *vfs_path, process_t *proc, uint64_t *entry_out)
   kfree(buf);
 
   *entry_out = ehdr->e_entry;
-  kprintf("exec: loaded %s → entry 0x%x\n",
-          vfs_path,
-          (uint32_t)ehdr->e_entry);
   return 0;
 }
 
