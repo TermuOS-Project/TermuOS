@@ -1,3 +1,6 @@
 [submodule "usr/src/luna"]
 	path = usr/src/luna
 	url = git@github.com:TermuOS-Project/Luna.git
+[submodule "usr/lib/tlibc"]
+	path = usr/lib/tlibc
+	url = https://github.com/TermuOS-Project/tlibc.git
