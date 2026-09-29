@@ -211,7 +211,7 @@ TLIBC_A   := $(TLIBC_DIR)/libtlibc.a
 TLIBC_INC := -I$(TLIBC_DIR)/include
 
 .PHONY: luna tlibc
-luna: $(TSYS_LIB_A)
+luna: $(TSYS_LIB_A) $(TLIBC_A)
 	$(Q)printf "  [USR]   luna\n"
 	$(Q)$(MAKE) -C $(LUNA_DIR) TERMUOS_ROOT=$(CURDIR)
 
@@ -265,37 +265,37 @@ $(TSYS_LIB_A): $(TSYS_LIB_OBJS)
 	$(Q)printf "  [AR]    libtsys.a\n"
 	$(Q)ar rcs $@ $^
 
-$(TSYS_OUT)/echo.tsys: tsys/echo/echo.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/echo.tsys: tsys/echo/echo.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  echo.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/echo/echo.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/uname.tsys: tsys/uname/uname.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/uname.tsys: tsys/uname/uname.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  uname.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/uname/uname.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/cat.tsys: tsys/cat/cat.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/cat.tsys: tsys/cat/cat.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  cat.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/cat/cat.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/edit.tsys: tsys/edit/edit.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/edit.tsys: tsys/edit/edit.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  edit.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/edit/edit.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  lsdrv.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  help.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/help/help.c $(TLIBC_A) $(TSYS_LIB_A)
 
-$(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  fetch.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/fetch/fetch.c $(TLIBC_A) $(TSYS_LIB_A)
