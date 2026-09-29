@@ -28,8 +28,3 @@ void _exit(int code)
     for (;;)
         ;
 }
-
-void exit(int code)
-{
-    _exit(code);
-}

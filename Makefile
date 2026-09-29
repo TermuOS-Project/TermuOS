@@ -206,10 +206,20 @@ disk.img: tools/mkfs_tfs
 LUNA_DIR := usr/src/luna
 LUNA_BIN := $(LUNA_DIR)/luna.tsys
 
-.PHONY: luna
+TLIBC_DIR := usr/lib/tlibc
+TLIBC_A   := $(TLIBC_DIR)/libtlibc.a
+TLIBC_INC := -I$(TLIBC_DIR)/include
+
+.PHONY: luna tlibc
 luna: $(TSYS_LIB_A)
 	$(Q)printf "  [USR]   luna\n"
 	$(Q)$(MAKE) -C $(LUNA_DIR) TERMUOS_ROOT=$(CURDIR)
+
+tlibc:
+	$(Q)$(MAKE) -C $(TLIBC_DIR)
+
+$(TLIBC_A):
+	$(Q)$(MAKE) -C $(TLIBC_DIR)
 
 # Future: other usr packages go here and as dependencies of `usr`
 usr: tsys luna
@@ -237,7 +247,6 @@ TSYS_HDRS := $(wildcard tsys/lib/include/*.h)
 TSYS_LIB_SRCS := \
 	tsys/lib/src/syscall.c \
 	tsys/lib/src/unistd.c \
-	tsys/lib/src/string.c \
 	tsys/lib/src/fb.c \
 	tsys/lib/src/input.c \
 	tsys/lib/src/rtc.c \
@@ -258,40 +267,52 @@ $(TSYS_LIB_A): $(TSYS_LIB_OBJS)
 
 $(TSYS_OUT)/echo.tsys: tsys/echo/echo.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  echo.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/echo/echo.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/echo/echo.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/uname.tsys: tsys/uname/uname.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  uname.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/uname/uname.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/uname/uname.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/cat.tsys: tsys/cat/cat.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  cat.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/cat/cat.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/cat/cat.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/edit.tsys: tsys/edit/edit.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  edit.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/edit/edit.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/edit/edit.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  lsdrv.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  help.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/help/help.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/help/help.c $(TLIBC_A) $(TSYS_LIB_A)
 
 $(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  fetch.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/fetch/fetch.c $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/fetch/fetch.c $(TLIBC_A) $(TSYS_LIB_A)
+
+$(TSYS_OUT)/hello_tlibc.tsys: tsys/hello_tlibc/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+	$(Q)printf "  [TSYS]  hello_tlibc.tsys\n"
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/hello_tlibc/hello.c $(TLIBC_A) $(TSYS_LIB_A)
 
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
 #	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TSYS_LIB_A)
 
-TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys
+TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys
 
-tsys: $(TSYS_BINS)
+tsys: tlibc $(TSYS_BINS)
 
 tsys-clean:
 	rm -rf $(TSYS_OUT)
@@ -369,3 +390,4 @@ limine:
 clean:
 	@rm -rf $(BUILD_DIR) $(KERNEL) termuos.iso iso/ disk.img test.img tests-serial.log
 	@$(MAKE) -C $(LUNA_DIR) clean 2>/dev/null || true
+	@$(MAKE) -C $(TLIBC_DIR) clean 2>/dev/null || true
