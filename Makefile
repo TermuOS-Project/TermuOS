@@ -234,7 +234,7 @@ TSYS_CC      := gcc
 TSYS_CFLAGS  := -static -nostdlib -no-pie -ffreestanding \
                 -fno-stack-protector -fno-asynchronous-unwind-tables \
                 -fcf-protection=none -O2 -Wall \
-                -Itsys/lib/include
+                $(TLIBC_INC) -Itsys/lib/include
 
 TSYS_CRT0    := tsys/lib/crt0.S
 TSYS_OUT     := $(BUILD_DIR)/tsys
@@ -245,8 +245,6 @@ TFS_WRITE    := ./tools/tfs_write
 TSYS_HDRS := $(wildcard tsys/lib/include/*.h)
 
 TSYS_LIB_SRCS := \
-	tsys/lib/src/syscall.c \
-	tsys/lib/src/unistd.c \
 	tsys/lib/src/fb.c \
 	tsys/lib/src/input.c \
 	tsys/lib/src/rtc.c \
