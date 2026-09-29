@@ -211,7 +211,7 @@ TLIBC_A   := $(TLIBC_DIR)/libtlibc.a
 TLIBC_INC := -I$(TLIBC_DIR)/include
 
 .PHONY: luna tlibc
-luna: $(TSYS_LIB_A) $(TLIBC_A)
+luna: $(TERMUOS_LIB_A) $(TLIBC_A)
 	$(Q)printf "  [USR]   luna\n"
 	$(Q)$(MAKE) -C $(LUNA_DIR) TERMUOS_ROOT=$(CURDIR)
 
@@ -230,83 +230,87 @@ usr-clean:
 # ---------------------------------------------------------------------------
 # tsys userspace + libtsys
 # ---------------------------------------------------------------------------
+TERMUOS_LIB_DIR := usr/lib/libtermuos
+TERMUOS_LIB_INC := -I$(TERMUOS_LIB_DIR)/include
+TERMUOS_LIB_OUT := $(BUILD_DIR)/libtermuos
+TERMUOS_LIB_A   := $(TERMUOS_LIB_OUT)/libtermuos.a
+
 TSYS_CC      := gcc
 TSYS_CFLAGS  := -static -nostdlib -no-pie -ffreestanding \
                 -fno-stack-protector -fno-asynchronous-unwind-tables \
                 -fcf-protection=none -O2 -Wall \
-                $(TLIBC_INC) -Itsys/lib/include
+                $(TLIBC_INC) $(TERMUOS_LIB_INC)
 
 TSYS_CRT0    := tsys/lib/crt0.S
 TSYS_OUT     := $(BUILD_DIR)/tsys
-TSYS_LIB_A   := $(TSYS_OUT)/libtsys.a
+TERMUOS_LIB_A   := $(TERMUOS_LIB_OUT)/libtermuos.a
 DISK_IMG     ?= disk.img
 TFS_WRITE    := ./tools/tfs_write
 
-TSYS_HDRS := $(wildcard tsys/lib/include/*.h)
+TERMUOS_LIB_SRCS := \
+	$(TERMUOS_LIB_DIR)/src/fb.c \
+	$(TERMUOS_LIB_DIR)/src/input.c \
+	$(TERMUOS_LIB_DIR)/src/rtc.c \
+	$(TERMUOS_LIB_DIR)/src/dirent.c
 
-TSYS_LIB_SRCS := \
-	tsys/lib/src/fb.c \
-	tsys/lib/src/input.c \
-	tsys/lib/src/rtc.c \
-	tsys/lib/src/dirent.c
+TERMUOS_LIB_OBJS := $(patsubst $(TERMUOS_LIB_DIR)/src/%.c,$(TERMUOS_LIB_OUT)/%.o,$(TERMUOS_LIB_SRCS))
+TERMUOS_HDRS     := $(wildcard $(TERMUOS_LIB_DIR)/include/*.h)
 
-TSYS_LIB_OBJS := $(patsubst tsys/lib/src/%.c,$(TSYS_OUT)/lib/%.o,$(TSYS_LIB_SRCS))
-
-$(TSYS_OUT) $(TSYS_OUT)/lib:
+$(TERMUOS_LIB_OUT) $(TSYS_OUT):
 	mkdir -p $@
 
-$(TSYS_OUT)/lib/%.o: tsys/lib/src/%.c $(TSYS_HDRS) | $(TSYS_OUT)/lib
-	$(Q)printf "  [TSYS]  %s\n" "$<"
+$(TERMUOS_LIB_OUT)/%.o: $(TERMUOS_LIB_DIR)/src/%.c $(TERMUOS_HDRS) | $(TERMUOS_LIB_OUT)
+	$(Q)printf "  [TERMUOS]  %s\n" "$<"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -c $< -o $@
 
-$(TSYS_LIB_A): $(TSYS_LIB_OBJS)
-	$(Q)printf "  [AR]    libtsys.a\n"
+$(TERMUOS_LIB_A): $(TERMUOS_LIB_OBJS)
+	$(Q)printf "  [AR]    libtermuos.a\n"
 	$(Q)ar rcs $@ $^
 
-$(TSYS_OUT)/echo.tsys: tsys/echo/echo.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/echo.tsys: tsys/echo/echo.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  echo.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/echo/echo.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/echo/echo.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/uname.tsys: tsys/uname/uname.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/uname.tsys: tsys/uname/uname.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  uname.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/uname/uname.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/uname/uname.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/cat.tsys: tsys/cat/cat.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/cat.tsys: tsys/cat/cat.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  cat.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/cat/cat.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/cat/cat.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/edit.tsys: tsys/edit/edit.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/edit.tsys: tsys/edit/edit.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  edit.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/edit/edit.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/edit/edit.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/lsdrv.tsys: tsys/lsdrv/lsdrv.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  lsdrv.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/lsdrv/lsdrv.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/help.tsys: tsys/help/help.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  help.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/help/help.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/help/help.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/fetch.tsys: tsys/fetch/fetch.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  fetch.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/fetch/fetch.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/fetch/fetch.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/hello_tlibc.tsys: tsys/hello_tlibc/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/hello_tlibc.tsys: tsys/hello_tlibc/hello.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  hello_tlibc.tsys\n"
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) tsys/hello_tlibc/hello.c $(TLIBC_A) $(TSYS_LIB_A)
+		$(TSYS_CRT0) tsys/hello_tlibc/hello.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
 # Add more apps here, e.g.:
-# $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
+# $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
-#	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TSYS_LIB_A)
+#	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TERMUOS_LIB_A)
 
 TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys
 
@@ -344,9 +348,9 @@ TEST_FIXTURES := motd big.txt block.txt empty.txt scratch.txt
 $(TEST_OUT):
 	mkdir -p $@
 
-$(TEST_OUT)/%.tsys: tests/tsys/%.c $(TSYS_CRT0) $(TSYS_LIB_A) $(TSYS_HDRS) | $(TEST_OUT)
+$(TEST_OUT)/%.tsys: tests/tsys/%.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TSYS_HDRS) | $(TEST_OUT)
 	$(Q)printf "  [TEST]  $*.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) $< $(TSYS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) $< $(TERMUOS_LIB_A)
 
 # A throwaway image, rebuilt every run: tfs_write never overwrites, so the
 # tests must not reuse an image that already holds older copies.
