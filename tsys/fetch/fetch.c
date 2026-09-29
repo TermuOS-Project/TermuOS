@@ -1,4 +1,4 @@
-#include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 #include <fb.h>
 #include <syscall.h>
@@ -14,30 +14,6 @@ struct driver_info {
 #ifndef SYS_UPTIME
 #define SYS_UPTIME 201
 #endif
-
-static void puts_(const char *s)
-{
-    if (s)
-        write(1, s, strlen(s));
-}
-
-static void put_u(unsigned long v)
-{
-    char buf[24];
-    int i = 0;
-    if (v == 0) {
-        write(1, "0", 1);
-        return;
-    }
-    while (v > 0 && i < 23) {
-        buf[i++] = (char)('0' + (v % 10));
-        v /= 10;
-    }
-    while (i > 0)
-        write(1, &buf[--i], 1);
-}
-
-static void nl(void) { write(1, "\n", 1); }
 
 static const char *logo[] = {
     "  _______                ",
@@ -56,9 +32,9 @@ static const char *logo[] = {
 static void pad_logo(const char *line)
 {
     int n = (int)strlen(line);
-    puts_(line);
+    printf("%s", line);
     while (n < LOGO_WIDTH) {
-        write(1, " ", 1);
+        printf(" ");
         n++;
     }
 }
@@ -83,68 +59,46 @@ int main(int argc, char **argv)
     if (ndrv < 0)
         ndrv = 0;
 
-    up = __syscall0(SYS_UPTIME); /* ticks if implemented; else ignore */
+    up = __syscall0(SYS_UPTIME);
 
-    /* side-by-side: logo | info */
     for (i = 0; i < LOGO_LINES; i++) {
         pad_logo(logo[i]);
 
-        if (i == 0) {
-            puts_(host);
-            puts_("@localhost");
-        } else if (i == 1) {
-            puts_("----------------");
-        } else if (i == 2) {
-            puts_("OS:     TermuOS 1.0.0");
-        } else if (i == 3) {
-            puts_("Kernel: TermuOS x86_64");
-        } else if (i == 4) {
-            puts_("Shell:  shell");
-        } else if (i == 5) {
-            puts_("Arch:   x86_64");
-        } else if (i == 6) {
-            if (has_fb) {
-                puts_("Res:    ");
-                put_u((unsigned long)fb.width);
-                puts_("x");
-                put_u((unsigned long)fb.height);
-                puts_(" @ ");
-                put_u((unsigned long)fb.bpp);
-                puts_(" bpp");
-            } else {
-                puts_("Res:    (no fb)");
-            }
+        if (i == 0)
+            printf("%s@localhost", host);
+        else if (i == 1)
+            printf("----------------");
+        else if (i == 2)
+            printf("OS:     TermuOS 1.0.0");
+        else if (i == 3)
+            printf("Kernel: TermuOS x86_64");
+        else if (i == 4)
+            printf("Shell:  shell");
+        else if (i == 5)
+            printf("Arch:   x86_64");
+        else if (i == 6) {
+            if (has_fb)
+                printf("Res:    %ux%u @ %u bpp",
+                       (unsigned)fb.width, (unsigned)fb.height, (unsigned)fb.bpp);
+            else
+                printf("Res:    (no fb)");
         } else if (i == 7) {
-            puts_("Drivers:");
-            put_u((unsigned long)ndrv);
-            if (up > 0) {
-                puts_("  up:");
-                put_u((unsigned long)up);
-            }
+            if (up > 0)
+                printf("Uptime: %lu ticks", (unsigned long)up);
+            else
+                printf("Uptime: n/a");
         }
-        nl();
+        printf("\n");
     }
 
-    /* driver names on their own lines */
-    if (ndrv > 0) {
-        nl();
-        puts_("Loaded:");
-        nl();
-        for (i = 0; i < (int)ndrv; i++) {
-            puts_("  - ");
-            puts_(drv[i].name);
-            if (drv[i].status == 0)
-                puts_(" (ok)");
-            nl();
-        }
+    printf("\nDrivers (%ld):\n", ndrv);
+    for (i = 0; i < (int)ndrv; i++) {
+        printf("  - %s", drv[i].name);
+        if (drv[i].status == 0)
+            printf(" (ok)");
+        printf("\n");
     }
 
-    /* colour bars (ASCII) */
-    nl();
-    puts_("    ");
-    //puts_("\033[40m  \033[41m  \033[42m  \033[43m  \033[44m  \033[45m  \033[46m  \033[47m  \033[0m");
-    puts_("    #### #### #### ####");
-    nl();
-
+    printf("\n    #### #### #### ####\n");
     return 0;
 }

@@ -1,11 +1,9 @@
-#include <unistd.h>
-#include <string.h>
+#include <stdio.h>
 
 int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
-    const char *s = "TermuOS 1.0.0\n";
-    write(1, s, strlen(s));
+    printf("TermuOS 1.0.0\n");
     return 0;
 }

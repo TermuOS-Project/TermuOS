@@ -262,17 +262,6 @@ static int parse_args(char *line, char **argv)
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
-static void cmd_help(int argc, char **argv)
-{
-    (void)argc;
-    (void)argv;
-    kprintf("Commands: help clear echo uname uptime mem threads\n");
-    kprintf("          ls cd pwd cat write touch mkdir rm reboot shutdown\n");
-    kprintf("          run ps kill mkfs\n");
-    kprintf("          ifconfig ping arp smtp\n");
-    kprintf("          obdir\n");
-}
-
 static void cmd_clear(int argc, char **argv)
 {
     (void)argc;
@@ -910,7 +899,6 @@ typedef struct
     void (*fn)(int, char **);
 } command_t;
 static const command_t commands[] = {
-    {"help", cmd_help},
     {"clear", cmd_clear},
     {"uptime", cmd_uptime},
     {"mem", cmd_mem},
