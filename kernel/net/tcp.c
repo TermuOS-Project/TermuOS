@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "../drivers/net/virtio_net.h"
+
 tcp_pcb_t tcp_pcb;
 
 extern uint8_t net_tx_buf[];
@@ -155,4 +157,62 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
                          NULL,
                          0);
     }
+}
+
+int tcp_is_established(void)
+{
+    return tcp_pcb.active && tcp_pcb.state == TCP_STATE_ESTABLISHED;
+}
+
+int tcp_connect(ip4_t dst, uint16_t dst_port, uint16_t local_port)
+{
+    if (local_port == 0)
+        local_port = 50000;
+
+    tcp_pcb.active = 1;
+    tcp_pcb.remote_ip = dst;
+    tcp_pcb.local_port = local_port;
+    tcp_pcb.remote_port = dst_port;
+    tcp_pcb.iss = 0x1000;
+    tcp_pcb.irs = 0;
+    tcp_pcb.snd_nxt = tcp_pcb.iss;
+    tcp_pcb.rcv_nxt = 0;
+    tcp_pcb.state = TCP_STATE_CLOSED;
+    tcp_pcb.smtp_state = SMTP_STATE_IDLE;
+
+    /* SYN */
+    if (tcp_send_segment(dst, local_port, dst_port,
+                         tcp_pcb.iss, 0, TCP_SYN, NULL, 0) < 0) {
+        kprintf("tcp: SYN deferred (ARP), retrying...\n");
+        for (int i = 0; i < 1000; i++) {
+            virtio_net_poll();
+            for (volatile int j = 0; j < 10000; j++)
+                ;
+        }
+        if (tcp_send_segment(dst, local_port, dst_port,
+                             tcp_pcb.iss, 0, TCP_SYN, NULL, 0) < 0) {
+            kprintf("tcp: SYN failed\n");
+            tcp_pcb.active = 0;
+            return -1;
+        }
+    }
+
+    tcp_pcb.snd_nxt = tcp_pcb.iss + 1;
+    tcp_pcb.state = TCP_STATE_SYN_SENT;
+    kprintf("tcp: SYN_SENT " IP_FMT ":%u\n", IP_ARGS(dst), dst_port);
+
+    for (int i = 0; i < 2000; i++) {
+        virtio_net_poll();
+        for (volatile int j = 0; j < 10000; j++)
+            ;
+        if (tcp_pcb.state == TCP_STATE_ESTABLISHED) {
+            kprintf("tcp: ESTABLISHED\n");
+            return 0;
+        }
+    }
+
+    kprintf("tcp: connect timeout\n");
+    tcp_pcb.state = TCP_STATE_CLOSED;
+    tcp_pcb.active = 0;
+    return -1;
 }

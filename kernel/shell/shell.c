@@ -11,6 +11,7 @@
 #include "../fs/tfs.h"
 #include "../fs/install.h"
 #include "../net/net.h"
+#include "../net/tcp.h"
 #include "../user/syscall.h"
 #include "../proc/process.h"
 #include "../proc/launch.h"
@@ -633,6 +634,60 @@ static void cmd_smtp(int argc, char **argv)
     kprintf("smtp: transmit attempt complete; any server replies will be shown above if received\n");
 }
 
+static int parse_ip4(const char *s, ip4_t *out)
+{
+    unsigned a, b, c, d;
+    int n = 0;
+    a = b = c = d = 0;
+    const char *p = s;
+    unsigned *parts[4] = { &a, &b, &c, &d };
+    for (int i = 0; i < 4; i++) {
+        unsigned v = 0;
+        int digits = 0;
+        while (*p >= '0' && *p <= '9') {
+            v = v * 10 + (unsigned)(*p - '0');
+            if (v > 255)
+                return -1;
+            p++;
+            digits++;
+        }
+        if (digits == 0)
+            return -1;
+        *parts[i] = v;
+        if (i < 3) {
+            if (*p != '.')
+                return -1;
+            p++;
+        }
+    }
+    if (*p != '\0')
+        return -1;
+    out->b[0] = (uint8_t)a;
+    out->b[1] = (uint8_t)b;
+    out->b[2] = (uint8_t)c;
+    out->b[3] = (uint8_t)d;
+    (void)n;
+    return 0;
+}
+
+static void cmd_tcpconnect(int argc, char **argv)
+{
+    if (argc < 3) {
+        kprintf("usage: tcpconnect <a.b.c.d> <port>\n");
+        return;
+    }
+    /* parse argv[1] into ip.b[0..3] - simple sscanf-style */
+    uint16_t port = (uint16_t)sh_atoi(argv[2]);
+
+   ip4_t ip;
+    if (parse_ip4(argv[1], &ip) != 0) {
+        kprintf("bad ip\n");
+        return;
+    }
+    kprintf("tcpconnect -> " IP_FMT ":%u\n", IP_ARGS(ip), port);
+    tcp_connect(ip, port, 50000);
+}
+
 // ─── PID ─────────────────────────────────────────────────────────────────
 
 static void cmd_pid(int argc, char **argv)
@@ -926,6 +981,7 @@ static const command_t commands[] = {
     {"ps", cmd_ps},
     {"kill", cmd_kill},
     {"install", cmd_install},
+    {"tcpconnect", cmd_tcpconnect},
     {NULL, NULL}};
 
 static void dispatch(char *line)

@@ -33,6 +33,9 @@ typedef enum {
 
 typedef struct {
     int active;
+    ip4_t remote_ip;
+    uint16_t local_port;
+    uint16_t remote_port;
     uint32_t iss;
     uint32_t irs;
     uint32_t snd_nxt;
@@ -57,3 +60,7 @@ int tcp_send_segment(ip4_t dst, uint16_t src_port, uint16_t dst_port,
 
 void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
                const uint8_t *data, size_t len);
+
+int tcp_connect(ip4_t dst, uint16_t dst_port, uint16_t local_port);
+
+int tcp_is_established(void);
