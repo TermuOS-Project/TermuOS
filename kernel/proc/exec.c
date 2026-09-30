@@ -252,6 +252,8 @@ int exec_load(const char *vfs_path, process_t *proc, uint64_t *entry_out)
   }
 
   // ── 3. map PT_LOAD segments ───────────────────────────────────────────────
+  uint64_t image_end = 0;
+  
   const uint8_t *phdr_base = buf + ehdr->e_phoff;
   for (uint16_t i = 0; i < ehdr->e_phnum; i++)
   {
@@ -267,7 +269,18 @@ int exec_load(const char *vfs_path, process_t *proc, uint64_t *entry_out)
       kprintf("exec: failed to map segment %u of %s\n", i, vfs_path);
       return -1;
     }
+
+    {
+      uint64_t seg_end = ph->p_vaddr + ph->p_memsz;
+      if (seg_end > image_end)
+        image_end = seg_end;
+    }
   }
+
+  image_end = (image_end + 0xFFFULL) & ~0xFFFULL;
+  if (image_end < 0x500000ULL)
+    image_end = 0x500000ULL;
+  proc->brk = image_end;
 
   // ── 4. allocate user stack ────────────────────────────────────────────────
   uint64_t stack_bottom = EXEC_USER_STACK_TOP - EXEC_USER_STACK_PAGES * PAGE_SIZE;

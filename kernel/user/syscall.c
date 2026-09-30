@@ -62,41 +62,44 @@ static int syscall_supported(void)
  * brk(addr) sets it.  We back every new page with physical memory on demand.
  */
 #define USER_BRK_BASE 0x0000000000400000ULL /* just above musl's top ~0x2b0000 */
-#define USER_BRK_MAX 0x0000000010000000ULL
-
-static uint64_t current_brk = 0;
-
-pagemap_t current_user_pm; /* dummy - elf_load removed */
-
-static uint64_t sys_brk(uint64_t addr)
-{
-    if (addr == 0 || addr < current_brk)
-        return current_brk;
-
-    if (addr > USER_BRK_MAX)
-        return current_brk; /* refuse; musl will fall back to mmap */
-
-    /* Map the new pages between current_brk and addr. */
-    uint64_t start = (current_brk + 0xFFF) & ~0xFFFULL;
-    uint64_t end = (addr + 0xFFF) & ~0xFFFULL;
-
-    for (uint64_t page = start; page < end; page += PAGE_SIZE)
-    {
-        void *phys = pmm_alloc();
-        if (!phys)
-            return current_brk; /* OOM — return old break */
-        vmm_map(current_user_pm, page, (uint64_t)phys,
-                VMM_PRESENT | VMM_WRITE | VMM_USER);
-    }
-
-    current_brk = addr;
-    return current_brk;
-}
+#define USER_BRK_MAX 0x0000000040000000ULL /* 1GB user ceiling */
 
 static process_t *cur_proc(void)
 {
     thread_t *t = thread_current();
     return t ? t->owner : 0;
+}
+
+static uint64_t sys_brk(uint64_t addr)
+{
+    process_t *proc = cur_proc();
+    if (!proc)
+        return 0;
+
+    /* brk(0) -> query */
+    if (addr == 0)
+        return proc->brk;
+
+    /* shrink or no-op: only allow grow for now */
+    if (addr <= proc->brk)
+        return proc->brk;
+
+    if (addr > USER_BRK_MAX)
+        return proc->brk;
+
+    uint64_t start = (proc->brk + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    uint64_t end   = (addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    for (uint64_t page = start; page < end; page += PAGE_SIZE) {
+        void *phys = pmm_alloc();
+        if (!phys)
+            return proc->brk;
+        vmm_map(proc->pagemap, page, (uint64_t)phys,
+                VMM_PRESENT | VMM_WRITE | VMM_USER);
+    }
+
+    proc->brk = addr;
+    return proc->brk;
 }
 
 /* mmap */
@@ -121,6 +124,8 @@ static process_t *cur_proc(void)
 #define MMAP_BASE 0x0000000020000000ULL /* 512 MB */
 #define MMAP_MAX 0x0000000080000000ULL  /* 2   GB */
 static uint64_t mmap_bump = MMAP_BASE;
+
+pagemap_t current_user_pm;
 
 static uint64_t sys_mmap(uint64_t addr, uint64_t len, uint64_t prot,
                          uint64_t flags, uint64_t fd, uint64_t off)

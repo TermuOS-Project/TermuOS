@@ -1,15 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
 
 int main(void)
 {
-    printf("hello from tlibc %d\n", 42);
-    char *p = malloc(32);
-    if (p) {
-        strcpy(p, "heap ok");
-        printf("%s\n", p);
-        free(p);
+    void *b0 = brk(0);
+    printf("brk0=%p\n", b0);
+
+    char *p = malloc(1024 * 1024);
+    if (!p) {
+        printf("malloc failed\n");
+        return 1;
     }
+    p[0] = 'A';
+    p[1024 * 1024 - 1] = 'Z';
+    printf("malloc 1M ok brk=%p\n", brk(0));
+    free(p);
     return 0;
 }

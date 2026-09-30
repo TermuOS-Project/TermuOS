@@ -70,6 +70,7 @@ process_t *proc_create(const char *name)
   p->state = PROC_RUNNING;
   p->exit_code = 0;
   p->pagemap = vmm_new_pagemap();
+  p->brk = 0;
 
   handle_table_init(&p->handles);
 

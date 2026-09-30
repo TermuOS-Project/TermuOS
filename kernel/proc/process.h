@@ -24,6 +24,7 @@ typedef struct process
   int32_t exit_code;
   handle_table_t handles;
   object_header_t *ob_header;
+  uint64_t brk;
 } process_t;
 
 void proc_init(void);
