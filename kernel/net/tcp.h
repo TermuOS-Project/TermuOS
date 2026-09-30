@@ -31,6 +31,8 @@ typedef enum {
     SMTP_STATE_DONE = 8,
 } smtp_state_t;
 
+#define TCP_RX_CAP 4096
+
 typedef struct {
     int active;
     ip4_t remote_ip;
@@ -48,19 +50,21 @@ typedef struct {
     char smtp_lines[4][256];
     int smtp_line_start;
     int smtp_line_end;
+
+    uint8_t rx_buf[TCP_RX_CAP];
+    size_t rx_len;
 } tcp_pcb_t;
 
 extern tcp_pcb_t tcp_pcb;
 
 void tcp_init(void);
-
 int tcp_send_segment(ip4_t dst, uint16_t src_port, uint16_t dst_port,
                      uint32_t seq, uint32_t ack, uint8_t flags,
                      const void *payload, size_t len);
-
 void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
                const uint8_t *data, size_t len);
-
 int tcp_connect(ip4_t dst, uint16_t dst_port, uint16_t local_port);
-
 int tcp_is_established(void);
+int tcp_send(const void *data, size_t len);
+int tcp_recv(void *buf, size_t max);
+int tcp_rx_available(void);

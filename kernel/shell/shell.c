@@ -686,6 +686,26 @@ static void cmd_tcpconnect(int argc, char **argv)
     }
     kprintf("tcpconnect -> " IP_FMT ":%u\n", IP_ARGS(ip), port);
     tcp_connect(ip, port, 50000);
+
+    const char *msg = "hello from TermuOS\n";
+    int n = tcp_send(msg, 18);
+    kprintf("tcp_send -> %d\n", n);
+
+    for (int i = 0; i < 100000; i++) {
+        virtio_net_poll();
+        if (tcp_rx_available() > 0)
+            break;
+        for (volatile int j = 0; j < 10000; j++)
+            ;
+    }
+    char buf[256];
+    int r = tcp_recv(buf, sizeof(buf) - 1);
+    if (r > 0) {
+        buf[r] = 0;
+        kprintf("tcp_recv: %s\n", buf);
+    } else {
+        kprintf("tcp_recv: empty\n");
+    }
 }
 
 // ─── PID ─────────────────────────────────────────────────────────────────

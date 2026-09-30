@@ -579,12 +579,31 @@ void net_receive(const void *frame, size_t len)
         }
         else if (ip->proto == IP_PROTO_TCP)
         {
-            if (len < sizeof(eth_hdr_t) + sizeof(ip4_hdr_t) + sizeof(tcp_hdr_t))
+            size_t ip_hdr_len = (size_t)(ip->ver_ihl & 0x0f) * 4;
+            if (ip_hdr_len < sizeof(ip4_hdr_t))
                 return;
-            const tcp_hdr_t *tcp = (const tcp_hdr_t *)(ip + 1);
-            size_t payload_len =
-                len - (sizeof(eth_hdr_t) + sizeof(ip4_hdr_t) + sizeof(tcp_hdr_t));
-            const uint8_t *data = (const uint8_t *)(tcp + 1);
+
+            size_t ip_total = net_htons(ip->total_len);
+            if (ip_total < ip_hdr_len)
+                return;
+
+            size_t max_ip = len - sizeof(eth_hdr_t);
+            if (ip_total > max_ip)
+                ip_total = max_ip;
+
+            const uint8_t *tcp_bytes = (const uint8_t *)ip + ip_hdr_len;
+            size_t tcp_section = ip_total - ip_hdr_len;
+            if (tcp_section < sizeof(tcp_hdr_t))
+                return;
+
+            const tcp_hdr_t *tcp = (const tcp_hdr_t *)tcp_bytes;
+            size_t tcp_hdr_len = (size_t)(tcp->offset_reserved >> 4) * 4;
+            if (tcp_hdr_len < sizeof(tcp_hdr_t) || tcp_hdr_len > tcp_section)
+                return;
+
+            size_t payload_len = tcp_section - tcp_hdr_len;
+            const uint8_t *data = tcp_bytes + tcp_hdr_len;
+
             tcp_input(ip, tcp, data, payload_len);
         }
     }

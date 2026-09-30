@@ -117,42 +117,41 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
     kprintf("net: TCP from " IP_FMT ":%u -> %u flags=0x%x payload=%u\n",
             IP_ARGS(ip->src), src_port, dst_port, tcp->flags, (unsigned)len);
 
-    if (tcp_pcb.active) {
-        if ((tcp->flags & TCP_SYN) && (tcp->flags & TCP_ACK)) {
-            tcp_pcb.irs = net_htonl(tcp->seq);
-            tcp_pcb.rcv_nxt = tcp_pcb.irs + 1;
-            if (tcp_pcb.state == TCP_STATE_SYN_SENT) {
-                tcp_pcb.state = TCP_STATE_ESTABLISHED;
-                kprintf("tcp: established\n");
-                tcp_send_segment(ip->src,
-                                 net_htons(tcp->dst_port),
-                                 net_htons(tcp->src_port),
-                                 tcp_pcb.snd_nxt,
-                                 tcp_pcb.rcv_nxt,
-                                 TCP_ACK,
-                                 NULL,
-                                 0);
-            }
-        } else if ((tcp->flags & TCP_ACK) && tcp_pcb.state == TCP_STATE_SYN_SENT) {
+    if (!tcp_pcb.active)
+        return;
+
+    if (dst_port != tcp_pcb.local_port)
+        return;
+
+    if ((tcp->flags & TCP_SYN) && (tcp->flags & TCP_ACK)) {
+        tcp_pcb.irs = net_htonl(tcp->seq);
+        tcp_pcb.rcv_nxt = tcp_pcb.irs + 1;
+        if (tcp_pcb.state == TCP_STATE_SYN_SENT) {
             tcp_pcb.state = TCP_STATE_ESTABLISHED;
-            kprintf("tcp: established (ack)\n");
+            kprintf("tcp: established\n");
+            tcp_send_segment(ip->src, tcp_pcb.local_port, src_port,
+                             tcp_pcb.snd_nxt, tcp_pcb.rcv_nxt,
+                             TCP_ACK, NULL, 0);
         }
+    } else if ((tcp->flags & TCP_ACK) && tcp_pcb.state == TCP_STATE_SYN_SENT) {
+        tcp_pcb.state = TCP_STATE_ESTABLISHED;
+        kprintf("tcp: established (ack)\n");
     }
 
-    if (len > 0 && tcp_pcb.smtp_state != SMTP_STATE_IDLE)
-        smtp_on_tcp_data(data, len);
+    if (len > 0 && tcp_pcb.state == TCP_STATE_ESTABLISHED) {
+        size_t space = TCP_RX_CAP - tcp_pcb.rx_len;
+        size_t n = len < space ? len : space;
+        for (size_t i = 0; i < n; i++)
+            tcp_pcb.rx_buf[tcp_pcb.rx_len + i] = data[i];
+        tcp_pcb.rx_len += n;
 
-    if (len > 0) {
-        if (tcp_pcb.active)
-            tcp_pcb.rcv_nxt += (uint32_t)len;
-        tcp_send_segment(ip->src,
-                         net_htons(tcp->dst_port),
-                         net_htons(tcp->src_port),
-                         tcp_pcb.snd_nxt,
-                         tcp_pcb.rcv_nxt,
-                         TCP_ACK,
-                         NULL,
-                         0);
+        tcp_pcb.rcv_nxt += (uint32_t)len; /* full segment length */
+        tcp_send_segment(ip->src, tcp_pcb.local_port, src_port,
+                         tcp_pcb.snd_nxt, tcp_pcb.rcv_nxt,
+                         TCP_ACK, NULL, 0);
+
+        if (tcp_pcb.smtp_state != SMTP_STATE_IDLE)
+            smtp_on_tcp_data(data, len);
     }
 }
 
@@ -212,4 +211,47 @@ int tcp_connect(ip4_t dst, uint16_t dst_port, uint16_t local_port)
     tcp_pcb.state = TCP_STATE_CLOSED;
     tcp_pcb.active = 0;
     return -1;
+}
+
+int tcp_send(const void *data, size_t len)
+{
+    if (!tcp_is_established() || !data || len == 0)
+        return -1;
+    if (len > 1400)
+        len = 1400;
+
+    if (tcp_send_segment(tcp_pcb.remote_ip,
+                         tcp_pcb.local_port,
+                         tcp_pcb.remote_port,
+                         tcp_pcb.snd_nxt,
+                         tcp_pcb.rcv_nxt,
+                         TCP_PSH | TCP_ACK,
+                         data, len) < 0)
+        return -1;
+
+    tcp_pcb.snd_nxt += (uint32_t)len;
+    return (int)len;
+}
+
+int tcp_rx_available(void)
+{
+    return (int)tcp_pcb.rx_len;
+}
+
+int tcp_recv(void *buf, size_t max)
+{
+    if (!tcp_is_established() || !buf)
+        return -1;
+    if (tcp_pcb.rx_len == 0)
+        return 0;
+
+    size_t n = tcp_pcb.rx_len < max ? tcp_pcb.rx_len : max;
+    uint8_t *d = (uint8_t *)buf;
+    for (size_t i = 0; i < n; i++)
+        d[i] = tcp_pcb.rx_buf[i];
+
+    for (size_t i = n; i < tcp_pcb.rx_len; i++)
+        tcp_pcb.rx_buf[i - n] = tcp_pcb.rx_buf[i];
+    tcp_pcb.rx_len -= n;
+    return (int)n;
 }
