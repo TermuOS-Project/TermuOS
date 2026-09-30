@@ -23,33 +23,30 @@ void tcp_init(void)
 
 static uint16_t tcp_checksum(const ip4_hdr_t *ip, const void *data, size_t len)
 {
-    struct {
-        uint32_t src;
-        uint32_t dst;
-        uint8_t zero;
-        uint8_t proto;
-        uint16_t tcp_len;
-    } __attribute__((packed)) pseudo;
-
     uint8_t buf[2048];
-    size_t total = sizeof(pseudo) + len;
+    size_t total = 12 + len;
     if (total > sizeof(buf))
         return 0;
 
-    pseudo.src = ((uint32_t)ip->src.b[0] << 24) |
-                 ((uint32_t)ip->src.b[1] << 16) |
-                 ((uint32_t)ip->src.b[2] << 8) |
-                 (uint32_t)ip->src.b[3];
-    pseudo.dst = ((uint32_t)ip->dst.b[0] << 24) |
-                 ((uint32_t)ip->dst.b[1] << 16) |
-                 ((uint32_t)ip->dst.b[2] << 8) |
-                 (uint32_t)ip->dst.b[3];
-    pseudo.zero = 0;
-    pseudo.proto = IP_PROTO_TCP;
-    pseudo.tcp_len = net_htons((uint16_t)len);
+    buf[0] = ip->src.b[0];
+    buf[1] = ip->src.b[1];
+    buf[2] = ip->src.b[2];
+    buf[3] = ip->src.b[3];
+    buf[4] = ip->dst.b[0];
+    buf[5] = ip->dst.b[1];
+    buf[6] = ip->dst.b[2];
+    buf[7] = ip->dst.b[3];
+    buf[8] = 0;
+    buf[9] = IP_PROTO_TCP;
+    buf[10] = (uint8_t)((len >> 8) & 0xff); /* TCP length, network order */
+    buf[11] = (uint8_t)(len & 0xff);
 
-    memcpy(buf, &pseudo, sizeof(pseudo));
-    memcpy(buf + sizeof(pseudo), data, len);
+    memcpy(buf + 12, data, len);
+
+    if (len & 1) {
+        buf[12 + len] = 0;
+        return net_checksum(buf, total + 1);
+    }
     return net_checksum(buf, total);
 }
 
