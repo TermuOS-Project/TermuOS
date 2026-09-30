@@ -114,9 +114,6 @@ void net_receive(const void *data, size_t len); // called by driver on packet rx
 // Send helpers
 void net_send_arp_request(ip4_t target_ip);
 void net_send_icmp_echo(ip4_t dst, uint16_t id, uint16_t seq);
-int net_send_tcp(ip4_t dst, uint16_t src_port, uint16_t dst_port,
-                 uint32_t seq, uint32_t ack, uint8_t flags,
-                 const void *data, size_t len);
 void net_send_smtp(ip4_t dst, uint16_t dst_port,
                    const char *helo, const char *from,
                    const char *to, const char *subject,
@@ -124,5 +121,14 @@ void net_send_smtp(ip4_t dst, uint16_t dst_port,
 void net_send_udp(ip4_t dst, uint16_t src_port, uint16_t dst_port,
                   const void *data, size_t len);
 
+int net_send_tcp(ip4_t dst, uint16_t src_port, uint16_t dst_port,
+                  uint32_t seq, uint32_t ack, uint8_t flags,
+                  const void *data, size_t len);
+
 uint16_t net_htons(uint16_t x);
 uint32_t net_htonl(uint32_t x);
+
+extern uint8_t net_tx_buf[2048];
+uint16_t net_checksum(const void *data, size_t len);
+ip4_t net_route(ip4_t dst);
+int net_arp_lookup(ip4_t ip, mac_t *mac_out);

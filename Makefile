@@ -105,6 +105,7 @@ SRCS += \
        kernel/drivers/net/virtio_net.c \
 	   kernel/drivers/gpu/virtio_gpu_vq.c \
        kernel/net/net.c \
+	   kernel/net/tcp.c \
 	   kernel/drivers/driver.c
 
 SRCS += \
