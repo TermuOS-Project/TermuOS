@@ -153,6 +153,47 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
         if (tcp_pcb.smtp_state != SMTP_STATE_IDLE)
             smtp_on_tcp_data(data, len);
     }
+
+    uint32_t seg_seq = net_htonl(tcp->seq);
+    uint8_t flags = tcp->flags;
+
+    /* peer FIN */
+    if (flags & TCP_FIN) {
+        if (tcp_pcb.state == TCP_STATE_ESTABLISHED ||
+            tcp_pcb.state == TCP_STATE_FIN_WAIT_1) {
+            tcp_pcb.rcv_nxt = seg_seq + (uint32_t)len + 1;
+
+            tcp_send_segment(tcp_pcb.remote_ip,
+                             tcp_pcb.local_port,
+                             tcp_pcb.remote_port,
+                             tcp_pcb.snd_nxt,
+                             tcp_pcb.rcv_nxt,
+                             TCP_ACK,
+                             NULL, 0);
+
+            if (tcp_pcb.state == TCP_STATE_ESTABLISHED) {
+                tcp_pcb.state = TCP_STATE_CLOSE_WAIT;
+                kprintf("tcp: CLOSE_WAIT (peer FIN)\n");
+            } else if (tcp_pcb.state == TCP_STATE_FIN_WAIT_1) {
+                tcp_pcb.state = TCP_STATE_TIME_WAIT;
+                kprintf("tcp: TIME_WAIT\n");
+            }
+        }
+    }
+
+    if ((flags & TCP_ACK) &&
+        (tcp_pcb.state == TCP_STATE_FIN_WAIT_1 ||
+         tcp_pcb.state == TCP_STATE_LAST_ACK)) {
+        uint32_t ack = net_htonl(tcp->ack);
+        if (ack >= tcp_pcb.snd_nxt) {
+            if (tcp_pcb.state == TCP_STATE_LAST_ACK) {
+                tcp_pcb.state = TCP_STATE_CLOSED;
+                kprintf("tcp: CLOSED (last ack)\n");
+            } else {
+                kprintf("tcp: FIN acked\n");
+            }
+        }
+    }
 }
 
 int tcp_is_established(void)
@@ -254,4 +295,47 @@ int tcp_recv(void *buf, size_t max)
         tcp_pcb.rx_buf[i - n] = tcp_pcb.rx_buf[i];
     tcp_pcb.rx_len -= n;
     return (int)n;
+}
+
+int tcp_close(void)
+{
+    if (!tcp_pcb.active)
+        return -1;
+
+    if (tcp_pcb.state == TCP_STATE_ESTABLISHED ||
+        tcp_pcb.state == TCP_STATE_CLOSE_WAIT) {
+        if (tcp_send_segment(tcp_pcb.remote_ip,
+                             tcp_pcb.local_port,
+                             tcp_pcb.remote_port,
+                             tcp_pcb.snd_nxt,
+                             tcp_pcb.rcv_nxt,
+                             TCP_FIN | TCP_ACK,
+                             NULL, 0) < 0)
+            return -1;
+
+        tcp_pcb.snd_nxt += 1;
+
+        if (tcp_pcb.state == TCP_STATE_CLOSE_WAIT)
+            tcp_pcb.state = TCP_STATE_LAST_ACK;
+        else    
+            tcp_pcb.state = TCP_STATE_FIN_WAIT_1;
+
+        kprintf("tcp: FIN sent state=%d\n", (int)tcp_pcb.state);
+    }
+
+    /* poll for peer ACK/FIN */
+    for (int i = 0; i < 2000; i++) {
+        virtio_net_poll();
+        if (tcp_pcb.state == TCP_STATE_CLOSED ||
+            tcp_pcb.state == TCP_STATE_TIME_WAIT)
+            break;
+        for (volatile int j = 0; j < 10000; j++)
+            ;
+    }
+
+    tcp_pcb.active = 0;
+    tcp_pcb.state = TCP_STATE_CLOSED;
+    tcp_pcb.rx_len = 0;
+    kprintf("tcp: CLOSED\n");
+    return 0;
 }

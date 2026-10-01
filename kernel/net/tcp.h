@@ -17,6 +17,8 @@ typedef enum {
     TCP_STATE_ESTABLISHED = 2,
     TCP_STATE_FIN_WAIT_1 = 3,
     TCP_STATE_TIME_WAIT = 4,
+    TCP_STATE_CLOSE_WAIT = 5,
+    TCP_STATE_LAST_ACK = 6,
 } tcp_state_t;
 
 typedef enum {
@@ -68,3 +70,4 @@ int tcp_is_established(void);
 int tcp_send(const void *data, size_t len);
 int tcp_recv(void *buf, size_t max);
 int tcp_rx_available(void);
+int tcp_close(void);
