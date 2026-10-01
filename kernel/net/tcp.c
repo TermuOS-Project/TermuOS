@@ -339,3 +339,14 @@ int tcp_close(void)
     kprintf("tcp: CLOSED\n");
     return 0;
 }
+
+int tcp_listen(uint16_t local_port)
+{
+    memset(&tcp_pcb, 0, sizeof(tcp_pcb));
+    tcp_pcb.active = 1;
+    tcp_pcb.local_port = local_port;
+    tcp_pcb.state = TCP_STATE_LISTEN;
+    tcp_pcb.rx_len = 0;
+    kprintf("tcp: LISTEN :%u\n", local_port);
+    return 0;
+}
