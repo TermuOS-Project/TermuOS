@@ -26,3 +26,8 @@ int fb_getpixel(uint32_t x, uint32_t y)
 {
     return (int)__syscall2(SYS_FB_GETPIXEL, (long)x, (long)y);
 }
+
+int fb_present(void)
+{
+    return (int)__syscall0(SYS_FB_PRESENT);
+}
