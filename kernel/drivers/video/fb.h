@@ -21,6 +21,15 @@ extern "C"
 
     uint32_t fb_getpixel(uint64_t x, uint64_t y);
 
+    int fb_gpu_active(void);
+    void fb_set_gpu_backend(int on);
+    void fb_present(void);
+
+    uint64_t fb_width(void);
+    uint64_t fb_height(void);
+    uint64_t fb_pitch(void);
+    uint32_t fb_bpp(void);
+
 #ifdef __cplusplus
 }
 #endif

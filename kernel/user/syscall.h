@@ -14,6 +14,7 @@
 #define SYS_MMAP 9
 #define SYS_MUNMAP 11
 #define SYS_BRK 12
+#define SYS_FB_PRESENT 13
 #define SYS_YIELD 24 /* sched_yield */
 #define SYS_SLEEP 35 /* nanosleep */
 #define SYS_GETPID 39

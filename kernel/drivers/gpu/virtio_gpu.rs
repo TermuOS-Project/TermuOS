@@ -42,6 +42,7 @@ extern "C" {
     ) -> i32;
     fn virtio_gpu_phase5_rust() -> i32;
     fn driver_register(d: *const GpuDriver);
+    fn fb_set_gpu_backend(on: i32);
 }
 
 unsafe fn pci_read8(bus: u8, slot: u8, func: u8, off: u8) -> u8 {
@@ -200,6 +201,7 @@ pub extern "C" fn virtio_gpu_rust_probe() {
         } else {
             let _ = virtio_gpu_phase5_rust();
         }
+        fb_set_gpu_backend(1);
     }
 }
 

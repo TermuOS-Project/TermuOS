@@ -567,14 +567,13 @@ static long sys_fb_info(uint64_t out_addr)
 
     if (!proc || !out_addr)
         return -1;
-    struct limine_framebuffer *fb = fb_get();
-    if (!fb)
+    if (fb_width() == 0)
         return -1;
 
-    info.width = fb->width;
-    info.height = fb->height;
-    info.pitch = fb->pitch;
-    info.bpp = fb->bpp;
+    info.width = fb_width();
+    info.height = fb_height();
+    info.pitch = fb_pitch();
+    info.bpp = fb_bpp();
 
     if (copy_to_user(proc, out_addr, &info, sizeof info) < 0)
         return -1;
@@ -584,6 +583,7 @@ static long sys_fb_info(uint64_t out_addr)
 static long sys_fb_clear(uint32_t colour)
 {
     fb_clear(colour);
+    fb_present();
     return 0;
 }
 
@@ -759,6 +759,12 @@ static long sys_stat_path(uint64_t path_uva, uint64_t st_uva)
     return 0;
 }
 
+static long sys_fb_present(void)
+{
+    fb_present();
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t
@@ -830,6 +836,8 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_readdir(a, b, c);
     case SYS_STAT:
         return sys_stat_path(a, b);
+    case SYS_FB_PRESENT:
+        return sys_fb_present();
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;
