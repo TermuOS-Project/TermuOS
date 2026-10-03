@@ -198,10 +198,9 @@ pub extern "C" fn virtio_gpu_rust_probe() {
         let rc = virtio_gpu_vq_init_and_get_display(common, notify, notify_mult);
         if rc != 0 {
             kprintf(b"virtio-gpu: vq/display failed\n\0".as_ptr());
-        } else {
-            let _ = virtio_gpu_phase5_rust();
+        } else if virtio_gpu_phase5_rust() == 0 {
+            fb_set_gpu_backend(1);
         }
-        fb_set_gpu_backend(1);
     }
 }
 

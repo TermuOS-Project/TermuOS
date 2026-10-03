@@ -149,6 +149,14 @@ void kernel_main(void)
     drivers_register_all();
     drivers_init();
 
+    if (fb_gpu_active()) {
+        kprintf("fb: gpu backend active %ux%u\n",
+                (unsigned)fb_width(), (unsigned)fb_height());
+        fb_clear(0xFFFF00FF);
+        fb_present();
+        kprintf("fb: test clear+present done\n");
+    }
+
     process_t *sp = proc_create("shell");
     if (!sp)
         sp = proc_kernel();
