@@ -135,15 +135,118 @@ unsafe fn submit_ok(out: *mut u8, out_len: usize) -> bool {
     true
 }
 
+fn px(r: u8, g: u8, b: u8) -> u32 {
+    (0xFFu32 << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
+}
+
+unsafe fn fb_ptr() -> *mut u32 {
+    core::ptr::addr_of_mut!(FB) as *mut u32
+}
+
+unsafe fn put_pixel(x: usize, y: usize, colour: u32) {
+    if x >= FB_W || y >= FB_H {
+        return;
+    }
+    *fb_ptr().add(y * FB_W + x) = colour;
+}
+
+unsafe fn fill_rect(x0: usize, y0: usize, w: usize, h: usize, colour: u32) {
+    let mut y = y0;
+    while y < y0 + h && y < FB_H {
+        let mut x = x0;
+        while x < x0 + w && w < FB_W {
+            put_pixel(x, y, colour);
+            x += 1;
+        }
+        y += 1;
+    }
+}
+
+unsafe fn present() -> bool {
+    let mut t = TransferToHost2d {
+        hdr: CtrlHdr {
+            type_: 0,
+            flags: 0,
+            fence_id: 0,
+            ctx_id: 0,
+            ring_idx: 0,
+            padding: [0; 3],
+        },
+        r: Rect {
+            x: 0,
+            y: 0,
+            width: FB_W as u32,
+            height: FB_H as u32,
+        },
+        offset: 0,
+        resource_id: FB_ID,
+        padding: 0,
+    };
+    zero_hdr(&mut t.hdr);
+    t.hdr.type_ = VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D;
+    if !submit_ok(
+        &mut t as *mut _ as *mut u8,
+        core::mem::size_of::<TransferToHost2d>(),
+    ) {
+        return false;
+    }
+
+    let mut f = ResourceFlush {
+        hdr: CtrlHdr {
+            type_: 0,
+            flags: 0,
+            fence_id: 0,
+            ctx_id: 0,
+            ring_idx: 0,
+            padding: [0; 3],
+        },
+        r: Rect {
+            x: 0,
+            y: 0,
+            width: FB_W as u32,
+            height: FB_H as u32,
+        },
+        resource_id: FB_ID,
+        padding: 0,
+    };
+    zero_hdr(&mut f.hdr);
+    f.hdr.type_ = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
+    submit_ok(
+        &mut f as *mut _ as *mut u8,
+        core::mem::size_of::<ResourceFlush>(),
+    )
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
-    // fill framebuffer (B8G8R8A8-ish solid)
-    let fb = core::ptr::addr_of_mut!(FB) as *mut u32;
-    let n = FB_W * FB_H;
-    let mut i = 0usize;
-    while i < n {
-        *fb.add(i) = 0xFF0000FF;
-        i += 1;
+    fill_rect(0, 0, FB_W, FB_H, px(0x1a, 0x1a, 0x2e));
+
+    let mut x = 0usize;
+    while x < FB_W {
+        let t = (x * 255 / FB_W) as u8;
+        fill_rect(x, 40, 1, 80, px(t, 80, 255 - t));
+        x += 1;
+    }
+
+    fill_rect(120, 180, 200, 120, px(0x00, 0xc8, 0x80));
+
+    let mut cy = 320usize;
+    while cy < 440 {
+        let mut cx = 40usize;
+        while cx < 200 {
+            let on = ((cx / 16) + (cy / 16)) % 2 == 0;
+            put_pixel(
+                cx,
+                cy,
+                if on {
+                    px(0xff, 0xff, 0xff)
+                } else {
+                    px(0x30, 0x30, 0x30)
+                },
+            );
+            cx += 1;
+        }
+        cy += 1;
     }
 
     // CREATE_2D
@@ -186,7 +289,7 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
             nr_entries: 1,
         },
         e: MemEntry {
-            addr: kvirt_to_phys(fb as *mut u8) & 0x000f_ffff_ffff_ffff,
+            addr: kvirt_to_phys(fb_ptr() as *mut u8) & 0x000f_ffff_ffff_ffff,
             length: (FB_W * FB_H * 4) as u32,
             padding: 0,
         },
@@ -230,62 +333,8 @@ pub unsafe extern "C" fn virtio_gpu_phase5_rust() -> i32 {
         return -1;
     }
 
-    // TRANSFER_TO_HOST_2D
-    let mut t = TransferToHost2d {
-        hdr: CtrlHdr {
-            type_: 0,
-            flags: 0,
-            fence_id: 0,
-            ctx_id: 0,
-            ring_idx: 0,
-            padding: [0, 0, 0],
-        },
-        r: Rect {
-            x: 0,
-            y: 0,
-            width: FB_W as u32,
-            height: FB_H as u32,
-        },
-        offset: 0,
-        resource_id: FB_ID,
-        padding: 0,
-    };
-    zero_hdr(&mut t.hdr);
-    t.hdr.type_ = VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D;
-    kprintf(b"virtio-gpu: phase5 TRANSFER\n\0".as_ptr());
-    if !submit_ok(
-        &mut t as *mut _ as *mut u8,
-        core::mem::size_of::<TransferToHost2d>(),
-    ) {
-        return -1;
-    }
-
-    // FLUSH
-    let mut f = ResourceFlush {
-        hdr: CtrlHdr {
-            type_: 0,
-            flags: 0,
-            fence_id: 0,
-            ctx_id: 0,
-            ring_idx: 0,
-            padding: [0, 0, 0],
-        },
-        r: Rect {
-            x: 0,
-            y: 0,
-            width: FB_W as u32,
-            height: FB_H as u32,
-        },
-        resource_id: FB_ID,
-        padding: 0,
-    };
-    zero_hdr(&mut f.hdr);
-    f.hdr.type_ = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
-    kprintf(b"virtio-gpu: phase5 FLUSH\n\0".as_ptr());
-    if !submit_ok(
-        &mut f as *mut _ as *mut u8,
-        core::mem::size_of::<ResourceFlush>(),
-    ) {
+    kprintf(b"virtio-gpu: phase5 present\n\0".as_ptr());
+    if !present() {
         return -1;
     }
 
