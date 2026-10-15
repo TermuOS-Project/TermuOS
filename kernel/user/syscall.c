@@ -8,6 +8,7 @@
 #include "../drivers/input/mouse.h"
 #include "../drivers/driver.h"
 #include "../drivers/rtc/rtc.h"
+#include "../drivers/gpu/gpu_fb.h"
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
 #include "../mm/pmm.h"
@@ -765,6 +766,26 @@ static long sys_fb_present(void)
     return 0;
 }
 
+static long sys_fb_blit(uint64_t uaddr)
+{
+    process_t *proc = cur_proc();
+    if (!proc || !uaddr || !fb_gpu_active())
+        return -1;
+
+    uint64_t w = fb_width();
+    uint64_t h = fb_height();
+    size_t n = (size_t)w * (size_t)h * 4;
+    void *dst = gpu_fb_ptr();
+    if (!dst)
+        return -1;
+
+    if (copy_from_user(proc, dst, uaddr, n) < 0)
+        return -1;
+
+    fb_present();
+    return 0;
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t
@@ -838,6 +859,8 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_stat_path(a, b);
     case SYS_FB_PRESENT:
         return sys_fb_present();
+    case SYS_FB_BLIT:
+        return sys_fb_blit(a);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;

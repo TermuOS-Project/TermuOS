@@ -31,3 +31,8 @@ int fb_present(void)
 {
     return (int)__syscall0(SYS_FB_PRESENT);
 }
+
+int fb_blit(const void *pixels)
+{
+    return (int)__syscall1(SYS_FB_BLIT, (long)pixels);
+}
