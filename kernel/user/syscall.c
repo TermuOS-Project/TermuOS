@@ -76,6 +76,8 @@ static uint64_t sys_brk(uint64_t addr)
     process_t *proc = cur_proc();
     if (!proc)
         return 0;
+    if (proc->pagemap)
+        vmm_switch(proc->pagemap);
 
     /* brk(0) -> query */
     if (addr == 0)
@@ -251,16 +253,12 @@ static uint64_t sys_exit(uint64_t code)
     if (t)
         t->state = THREAD_DEAD;
 
-    /* Let the normal scheduler run the shell again */
     scheduler_yield();
 
-    /* If yield returns, nothing is runnable */
-    kprintf("sys_exit: no runnable thread\n");
     for (;;)
         __asm__ volatile("hlt");
 }
 
-/* Most bytes one write() call will move through the kernel bounce buffer. */
 #define SYS_WRITE_MAX 512
 
 static uint64_t sys_write(uint64_t fd, uint64_t buf_addr, uint64_t len)
@@ -270,20 +268,20 @@ static uint64_t sys_write(uint64_t fd, uint64_t buf_addr, uint64_t len)
 
     if (!proc || !buf_addr)
         return (uint64_t)-1;
+    if (proc->pagemap)
+        vmm_switch(proc->pagemap);
     if (len == 0)
         return 0;
 
-    /* fd 0 is the console's read end; it is not writable. */
     if ((int)fd == 0)
         return (uint64_t)-1;
 
-    /* Short writes are fine — userspace loops — so cap each call rather
-     * than failing an oversized request. */
+    kprintf("sys_write fd=%d buf=0x%x len=0x%x\n",
+            (int)fd, (unsigned long)buf_addr, (unsigned long)len);
+
     if (len > SYS_WRITE_MAX)
         len = SYS_WRITE_MAX;
 
-    /* Take a copy before looking at the bytes: never hand a user pointer
-     * to the console or to the filesystem. */
     if (copy_from_user(proc, tmp, buf_addr, (size_t)len) < 0)
         return (uint64_t)-1;
 
@@ -315,6 +313,8 @@ static uint64_t sys_read(uint64_t fd, uint64_t buf, uint64_t len)
 
     if (!proc || !buf)
         return (uint64_t)-1;
+    if (proc->pagemap)
+        vmm_switch(proc->pagemap);
     if (len == 0)
         return 0;
 
@@ -616,6 +616,8 @@ static uint64_t sys_spawn(uint64_t path_addr)
 
     if (!proc || copy_user_str(proc, path, path_addr, sizeof path) < 0)
         return (uint64_t)-1;
+    if (proc->pagemap)
+        vmm_switch(proc->pagemap);
     if (path[0] == '\0')
         return (uint64_t)-1;
 
@@ -637,8 +639,9 @@ static uint64_t sys_wait(uint64_t pid)
         if (p->state == PROC_ZOMBIE)
         {
             int code = p->exit_code;
-            p->state = PROC_DEAD; /* free the slot */
-            break;
+            p->state = PROC_DEAD;
+            kprintf("sys_wait: reaped pid=%u code=%d\n", (unsigned)pid, code);
+            return (uint64_t)(int64_t)code;
         }
 
         scheduler_yield();

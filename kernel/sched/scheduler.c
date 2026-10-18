@@ -9,6 +9,16 @@ thread_t threads[MAX_THREADS];
 int current = 0;
 static int initialized = 0;
 
+uint64_t *syscall_user_rsp_ptr;
+uint64_t  syscall_kstack_top;
+
+static void sched_update_syscall_stack(void)
+{
+    thread_t *t = &threads[current];
+    syscall_user_rsp_ptr = &t->syscall_user_rsp;
+    syscall_kstack_top   = t->kstack_top;
+}
+
 extern void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
 
 void scheduler_init(void)
@@ -27,6 +37,13 @@ void scheduler_init(void)
 
     current = 0;
     initialized = 1;
+
+    uint8_t *ks = kmalloc(8192);
+    threads[0].kstack_mem = ks;
+    threads[0].kstack_top = ks ? (uint64_t)(ks + 8192) : 0;
+    threads[0].syscall_user_rsp = 0;
+
+    sched_update_syscall_stack();
 }
 
 thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
@@ -64,6 +81,11 @@ thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
     }
     t->name[i] = '\0';
     t->owner = owner ? owner : proc_kernel();
+
+    uint8_t *ks = kmalloc(8192);
+    t->kstack_mem = ks;
+    t->kstack_top = ks ? (uint64_t)(ks + 8192) : 0;
+    t->syscall_user_rsp = 0;
 
     uint64_t *sp = (uint64_t *)t->stack_top;
     *--sp = (uint64_t)thread_exit;
@@ -180,6 +202,8 @@ void scheduler_yield(void)
     threads[next].state = THREAD_RUNNING;
     current = next;
 
+    sched_update_syscall_stack();
+
     if (threads[prev].owner != threads[next].owner)
         vmm_switch(threads[next].owner->pagemap);
 
@@ -204,6 +228,8 @@ void scheduler_tick(registers_t *r)
         threads[prev].state = THREAD_READY;
     threads[next].state = THREAD_RUNNING;
     current = next;
+
+    sched_update_syscall_stack();
 
     uint64_t new_cr3 = 0;
     if (threads[prev].owner != threads[next].owner)

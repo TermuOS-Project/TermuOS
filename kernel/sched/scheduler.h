@@ -25,6 +25,10 @@ typedef struct thread
     char name[32];
     object_header_t *ob_header;
     struct process *owner;
+    
+    uint64_t syscall_user_rsp;
+    uint64_t kstack_top;
+    uint8_t *kstack_mem;
 } thread_t;
 
 extern thread_t threads[MAX_THREADS];

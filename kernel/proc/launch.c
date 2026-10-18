@@ -16,9 +16,9 @@ static void exec_thread_entry()
   proc_set_perm_mask(ctx->perm_mask);
 
   vmm_switch(ctx->pagemap);
-
+  
   jump_userspace(ctx->entry, ctx->stack_top);
-
+  
   thread_exit();
 }
 

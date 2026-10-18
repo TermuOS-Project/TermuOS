@@ -1,49 +1,56 @@
 bits 64
 
 extern syscall_dispatch
+extern syscall_user_rsp_ptr
+extern syscall_kstack_top
 
 section .bss
-align 16
-syscall_kernel_stack_bottom:
-    resb 8192
-global syscall_kernel_stack_top
-syscall_kernel_stack_top:
-
-syscall_user_rsp: resq 1
+align 8
+tmp_rax:
+    resq 1
 
 section .text
-
 global syscall_entry
 syscall_entry:
-    ; On entry (Linux x86-64 syscall ABI):
-    ;   rax = syscall number
-    ;   rdi = arg1, rsi = arg2, rdx = arg3
-    ;   r10 = arg4, r8  = arg5, r9  = arg6
-    ;   rcx = user RIP (clobbered by syscall instruction)
-    ;   r11 = user RFLAGS (clobbered by syscall instruction)
+    cli
 
-    mov [rel syscall_user_rsp], rsp
-    lea rsp, [rel syscall_kernel_stack_top]
+    mov [rel tmp_rax], rax
+    mov rax, [rel syscall_user_rsp_ptr]
+    mov [rax], rsp
+    mov rsp, [rel syscall_kstack_top]
+    mov rax, [rel tmp_rax]
 
-    push rcx            ; save user RIP
-    push r11            ; save user RFLAGS
+    push r15
+    push r14
+    push r13
+    push r12
+    push rbp
+    push rbx
+    push rcx
+    push r11
 
-    ; Call syscall_dispatch(num, a, b, c, d, e, f)
-    ; C ABI:            rdi  rsi rdx rcx r8  r9  [rsp+8]
-    ; Linux syscall:    rax  rdi rsi rdx r10 r8  r9
-    push r9             ; arg6 -> stack (7th C arg)
-    mov  r9,  r8        ; arg5 -> r9
-    mov  r8,  r10       ; arg4 -> r8
-    mov  rcx, rdx       ; arg3 -> rcx
-    mov  rdx, rsi       ; arg2 -> rdx
-    mov  rsi, rdi       ; arg1 -> rsi
-    mov  rdi, rax       ; num  -> rdi
-
+    push r9
+    mov r9, r8
+    mov r8, r10
+    mov rcx, rdx
+    mov rdx, rsi
+    mov rsi, rdi
+    mov rdi, rax
     call syscall_dispatch
+    add rsp, 8
 
-    add  rsp, 8         ; clean up arg6 from stack
+    pop r11
+    pop rcx
+    pop rbx
+    pop rbp
+    pop r12
+    pop r13
+    pop r14
+    pop r15
 
-    pop  r11            ; restore user RFLAGS
-    pop  rcx            ; restore user RIP
-    mov  rsp, [rel syscall_user_rsp]
+    mov r10, rax
+    mov rax, [rel syscall_user_rsp_ptr]
+    mov rsp, [rax]
+    mov rax, r10
+
     o64 sysret
