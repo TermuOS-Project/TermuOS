@@ -4,6 +4,7 @@
     .extern exit
 
 _start:
+    xor %ebp, %ebp
     mov (%rsp), %rdi
     lea 8(%rsp), %rsi
     call main
