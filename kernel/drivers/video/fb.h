@@ -30,6 +30,8 @@ extern "C"
     uint64_t fb_pitch(void);
     uint32_t fb_bpp(void);
 
+    void *fb_pixels(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,6 +1,8 @@
 #include "fb.h"
 #include "../gpu/gpu_fb.h"
 
+#include <stddef.h>
+
 static struct limine_framebuffer *_fb = 0;
 static int _use_gpu = 0;
 
@@ -172,4 +174,11 @@ uint32_t fb_getpixel(uint64_t x, uint64_t y)
     uint8_t *base = (uint8_t *)_fb->address;
     uint32_t *row = (uint32_t *)(base + y * _fb->pitch);
     return row[x];
+}
+
+void *fb_pixels(void)
+{
+    if (_use_gpu)
+        return gpu_fb_ptr();
+    return _fb ? _fb->address : NULL;
 }

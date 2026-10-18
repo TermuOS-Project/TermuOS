@@ -772,18 +772,25 @@ static long sys_fb_present(void)
 static long sys_fb_blit(uint64_t uaddr)
 {
     process_t *proc = cur_proc();
-    if (!proc || !uaddr || !fb_gpu_active())
+    if (!proc || !uaddr)
         return -1;
 
     uint64_t w = fb_width();
     uint64_t h = fb_height();
-    size_t n = (size_t)w * (size_t)h * 4;
-    void *dst = gpu_fb_ptr();
-    if (!dst)
+    void *base = fb_pixels();
+    if (!base || w == 0 || h == 0)
         return -1;
 
-    if (copy_from_user(proc, dst, uaddr, n) < 0)
-        return -1;
+    uint64_t pitch = fb_pitch();
+    uint64_t src_pitch = w * 4;
+
+    for (uint64_t y = 0; y < h; y++) {
+        if (copy_from_user(proc,
+                           (uint8_t *)base + y * pitch,
+                           uaddr + y * src_pitch,
+                           (size_t)src_pitch) < 0)
+            return -1;
+    }
 
     fb_present();
     return 0;
