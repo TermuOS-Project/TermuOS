@@ -24,9 +24,9 @@
 //     jump_userspace(entry, EXEC_USER_STACK_TOP);
 // ────────────────────────────────────────────────────────────────────────────
 
-// user stack: 64 KiB at the top of the lower half
+// user stack: 512 KiB at the top of the lower half
 #define EXEC_USER_STACK_TOP 0x0000700000000000ULL
-#define EXEC_USER_STACK_PAGES 16 // 16 x 4KB = 64 KiB
+#define EXEC_USER_STACK_PAGES 128 // 128 x 4KB = 512 KiB
 
 // Load ELF at `vfs_path` into `proc`'s pagemap.
 // On success, writes the entry point to *entry_out and returns 0.
