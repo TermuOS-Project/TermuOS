@@ -20,6 +20,7 @@ typedef enum {
     TCP_STATE_CLOSE_WAIT = 5,
     TCP_STATE_LAST_ACK = 6,
     TCP_STATE_LISTEN = 7,
+    TCP_STATE_SYN_RCVD = 8,
 } tcp_state_t;
 
 typedef enum {

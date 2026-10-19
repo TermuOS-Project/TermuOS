@@ -113,9 +113,11 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
 {
     uint16_t src_port = net_htons(tcp->src_port);
     uint16_t dst_port = net_htons(tcp->dst_port);
+    uint32_t seg_seq  = net_htonl(tcp->seq);
+    uint8_t  flags    = tcp->flags;
 
     kprintf("net: TCP from " IP_FMT ":%u -> %u flags=0x%x payload=%u\n",
-            IP_ARGS(ip->src), src_port, dst_port, tcp->flags, (unsigned)len);
+            IP_ARGS(ip->src), src_port, dst_port, flags, (unsigned)len);
 
     if (!tcp_pcb.active)
         return;
@@ -123,8 +125,46 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
     if (dst_port != tcp_pcb.local_port)
         return;
 
-    if ((tcp->flags & TCP_SYN) && (tcp->flags & TCP_ACK)) {
-        tcp_pcb.irs = net_htonl(tcp->seq);
+    /* ---- server: LISTEN (client sends SYN only) ---- */
+    if (tcp_pcb.state == TCP_STATE_LISTEN) {
+        if (flags & TCP_SYN) {
+            tcp_pcb.remote_ip   = ip->src;
+            tcp_pcb.remote_port = src_port;
+            tcp_pcb.irs         = seg_seq;
+            tcp_pcb.rcv_nxt     = seg_seq + 1;
+            tcp_pcb.iss         = 1000;
+            tcp_pcb.snd_nxt     = tcp_pcb.iss;
+
+            tcp_send_segment(ip->src,
+                             tcp_pcb.local_port,
+                             src_port,
+                             tcp_pcb.iss,
+                             tcp_pcb.rcv_nxt,
+                             TCP_SYN | TCP_ACK,
+                             NULL, 0);
+
+            tcp_pcb.snd_nxt = tcp_pcb.iss + 1;
+            tcp_pcb.state = TCP_STATE_SYN_RCVD;
+            kprintf("tcp: SYN_RCVD from " IP_FMT ":%u\n",
+                    IP_ARGS(ip->src), src_port);
+        }
+        return;
+    }
+
+    /* ---- server: SYN_RCVD → ESTABLISHED ---- */
+    if (tcp_pcb.state == TCP_STATE_SYN_RCVD) {
+        if (flags & TCP_ACK) {
+            tcp_pcb.state = TCP_STATE_ESTABLISHED;
+            kprintf("tcp: established (incoming)\n");
+            /* fall through for possible payload on same segment */
+        } else {
+            return;
+        }
+    }
+
+    /* ---- client: SYN+ACK ---- */
+    if ((flags & TCP_SYN) && (flags & TCP_ACK)) {
+        tcp_pcb.irs = seg_seq;
         tcp_pcb.rcv_nxt = tcp_pcb.irs + 1;
         if (tcp_pcb.state == TCP_STATE_SYN_SENT) {
             tcp_pcb.state = TCP_STATE_ESTABLISHED;
@@ -133,11 +173,12 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
                              tcp_pcb.snd_nxt, tcp_pcb.rcv_nxt,
                              TCP_ACK, NULL, 0);
         }
-    } else if ((tcp->flags & TCP_ACK) && tcp_pcb.state == TCP_STATE_SYN_SENT) {
+    } else if ((flags & TCP_ACK) && tcp_pcb.state == TCP_STATE_SYN_SENT) {
         tcp_pcb.state = TCP_STATE_ESTABLISHED;
         kprintf("tcp: established (ack)\n");
     }
 
+    /* ---- data ---- */
     if (len > 0 && tcp_pcb.state == TCP_STATE_ESTABLISHED) {
         size_t space = TCP_RX_CAP - tcp_pcb.rx_len;
         size_t n = len < space ? len : space;
@@ -145,7 +186,7 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
             tcp_pcb.rx_buf[tcp_pcb.rx_len + i] = data[i];
         tcp_pcb.rx_len += n;
 
-        tcp_pcb.rcv_nxt += (uint32_t)len; /* full segment length */
+        tcp_pcb.rcv_nxt += (uint32_t)len;
         tcp_send_segment(ip->src, tcp_pcb.local_port, src_port,
                          tcp_pcb.snd_nxt, tcp_pcb.rcv_nxt,
                          TCP_ACK, NULL, 0);
@@ -154,10 +195,7 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
             smtp_on_tcp_data(data, len);
     }
 
-    uint32_t seg_seq = net_htonl(tcp->seq);
-    uint8_t flags = tcp->flags;
-
-    /* peer FIN */
+    /* ---- peer FIN ---- */
     if (flags & TCP_FIN) {
         if (tcp_pcb.state == TCP_STATE_ESTABLISHED ||
             tcp_pcb.state == TCP_STATE_FIN_WAIT_1) {
@@ -181,6 +219,7 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
         }
     }
 
+    /* ---- our FIN acked ---- */
     if ((flags & TCP_ACK) &&
         (tcp_pcb.state == TCP_STATE_FIN_WAIT_1 ||
          tcp_pcb.state == TCP_STATE_LAST_ACK)) {
@@ -349,4 +388,24 @@ int tcp_listen(uint16_t local_port)
     tcp_pcb.rx_len = 0;
     kprintf("tcp: LISTEN :%u\n", local_port);
     return 0;
+}
+
+int tcp_accept(void)
+{
+    if (!tcp_pcb.active)
+        return -1;
+    if (tcp_pcb.state != TCP_STATE_LISTEN &&
+        tcp_pcb.state != TCP_STATE_SYN_RCVD &&
+        tcp_pcb.state != TCP_STATE_ESTABLISHED)
+        return -1;
+
+    for (int i = 0; i < 200000; i++) {
+        virtio_net_poll();
+        if (tcp_pcb.state == TCP_STATE_ESTABLISHED)
+            return 0;
+        for (volatile int j = 0; j < 10000; j++)
+            ;
+    }
+    kprintf("tcp: accept timeout state=%d\n", (int)tcp_pcb.state);
+    return -1;
 }

@@ -780,6 +780,79 @@ static void cmd_httpget(int argc, char **argv)
     tcp_close();
 }
 
+static void cmd_tcplisten(int argc, char **argv)
+{
+    uint16_t port = 8080;
+    if (argc >= 2)
+        port = (uint16_t)sh_atoi(argv[1]);
+
+    if (tcp_listen(port) != 0) {
+        kprintf("tcplisten: failed\n");
+        return;
+    }
+    kprintf("tcplisten: waiting on %u...\n", port);
+    if (tcp_accept() != 0) {
+        kprintf("tcplisten: accept failed\n");
+        return;
+    }
+    kprintf("tcplisten: client connected\n");
+    tcp_close();
+}
+
+static void cmd_httpserver(int argc, char **argv)
+{
+    uint16_t port = 8080;
+    if (argc >= 2)
+        port = (uint16_t)sh_atoi(argv[1]);
+
+    if (tcp_listen(port) != 0) {
+        kprintf("httpserver: listen failed\n");
+        return;
+    }
+    kprintf("httpserver: listening on %u\n", port);
+
+    if (tcp_accept() != 0) {
+        kprintf("httpserver: accept failed\n");
+        return;
+    }
+    kprintf("httpserver: client connected\n");
+
+    char req[512];
+    size_t got = 0;
+    for (int i = 0; i < 2000 && got < sizeof(req) - 1; i++) {
+        virtio_net_poll();
+        int r = tcp_recv(req + got, sizeof(req) - 1 - got);
+        if (r > 0) {
+            got += (size_t)r;
+            for (size_t j = 0; j + 3 < got; j++) {
+                if (req[j] == '\r' && req[j+1] == '\n' &&
+                    req[j+2] == '\r' && req[j+3] == '\n')
+                    goto have_req;
+            }
+        }
+        for (volatile int k = 0; k < 5000; k++)
+            ;
+    }
+have_req:
+    req[got] = '\0';
+    kprintf("httpserver: got %u bytes request\n", (unsigned)got);
+
+    static const char resp[] =
+        "HTTP/1.0 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "<html><body><h1>TermuOS</h1>"
+        "<p>Hello from the guest.</p></body></html>\r\n";
+
+    if (tcp_send(resp, sizeof(resp) - 1) < 0)
+        kprintf("httpserver: send failed\n");
+    else
+        kprintf("httpserver: response send\n");
+
+    tcp_close();
+}
+
 // ─── PID ─────────────────────────────────────────────────────────────────
 
 static void cmd_pid(int argc, char **argv)
@@ -1075,6 +1148,8 @@ static const command_t commands[] = {
     {"install", cmd_install},
     {"tcpconnect", cmd_tcpconnect},
     {"httpget", cmd_httpget},
+    {"tcplisten", cmd_tcplisten},
+    {"httpserver", cmd_httpserver},
     {NULL, NULL}};
 
 static void dispatch(char *line)
