@@ -33,6 +33,10 @@
 #define SYS_RTC_READ 62
 #define SYS_READDIR 63
 #define SYS_FB_BLIT 64
+#define SYS_TCP_CONNECT 70
+#define SYS_TCP_SEND 71
+#define SYS_TCP_RECV 72
+#define SYS_TCP_CLOSE 73
 #define SYS_UPTIME 201
 #define SYS_PORT_FIND 300
 #define SYS_PORT_SEND 301

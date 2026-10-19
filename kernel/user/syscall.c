@@ -9,6 +9,7 @@
 #include "../drivers/driver.h"
 #include "../drivers/rtc/rtc.h"
 #include "../drivers/gpu/gpu_fb.h"
+#include "../drivers/net/virtio_net.h"
 #include "../sched/scheduler.h"
 #include "../fs/vfs.h"
 #include "../mm/pmm.h"
@@ -18,6 +19,8 @@
 #include "../proc/process.h"
 #include "uaccess.h"
 #include "../lib/printf.h"
+#include "../net/tcp.h"
+#include "../net/net.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -272,12 +275,8 @@ static uint64_t sys_write(uint64_t fd, uint64_t buf_addr, uint64_t len)
         vmm_switch(proc->pagemap);
     if (len == 0)
         return 0;
-
     if ((int)fd == 0)
         return (uint64_t)-1;
-
-    kprintf("sys_write fd=%d buf=0x%x len=0x%x\n",
-            (int)fd, (unsigned long)buf_addr, (unsigned long)len);
 
     if (len > SYS_WRITE_MAX)
         len = SYS_WRITE_MAX;
@@ -285,7 +284,6 @@ static uint64_t sys_write(uint64_t fd, uint64_t buf_addr, uint64_t len)
     if (copy_from_user(proc, tmp, buf_addr, (size_t)len) < 0)
         return (uint64_t)-1;
 
-    /* fd 1 and 2: the console, on screen and down the serial line. */
     if ((int)fd == 1 || (int)fd == 2)
     {
         for (uint64_t i = 0; i < len; i++)
@@ -796,6 +794,81 @@ static long sys_fb_blit(uint64_t uaddr)
     return 0;
 }
 
+static long sys_tcp_connect(uint64_t ip_uva, uint64_t port, uint64_t local_port)
+{
+    process_t *proc = cur_proc();
+    uint8_t raw[4];
+    ip4_t ip;
+
+    if (!proc || !ip_uva)
+        return -1;
+    if (copy_from_user(proc, raw, ip_uva, 4) < 0)
+        return -1;
+
+    ip.b[0] = raw[0];
+    ip.b[1] = raw[1];
+    ip.b[2] = raw[2];
+    ip.b[3] = raw[3];
+
+    if (local_port == 0 || local_port > 65535)
+        local_port = 50000;
+    if (port == 0 || port > 65535)
+        return -1;
+
+    return tcp_connect(ip, (uint16_t)port, (uint16_t)local_port);
+}
+
+static long sys_tcp_send(uint64_t uva, uint64_t len)
+{
+    process_t *proc = cur_proc();
+    uint8_t tmp[1400];
+
+    if (!proc || !uva || len == 0)
+        return -1;
+    if (len > sizeof(tmp))
+        len = sizeof(tmp);
+    if (copy_from_user(proc, tmp, uva, (size_t)len) < 0)
+        return -1;
+
+    return tcp_send(tmp, (size_t)len);
+}
+
+static long sys_tcp_recv(uint64_t uva, uint64_t max)
+{
+    process_t *proc = cur_proc();
+    uint8_t tmp[512];
+
+    if (!proc || !uva || max == 0)
+        return -1;
+    if (max > sizeof(tmp))
+        max = sizeof(tmp);
+
+    for (int i = 0; i < 5000; i++) {
+        virtio_net_poll();
+        if (tcp_rx_available() > 0)
+            break;
+        if (!tcp_is_established() && tcp_rx_available() == 0) {
+            break;
+        }
+        for (volatile int j = 0; j < 1000; j++)
+            ;
+    }
+
+    int n = tcp_recv(tmp, (size_t)max);
+    if (n < 0)
+        return -1;
+    if (n == 0)
+        return 0;
+    if (copy_to_user(proc, uva, tmp, (size_t)n) < 0)
+        return -1;
+    return n;
+}
+
+static long sys_tcp_close(void)
+{
+    return tcp_close();
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t
@@ -871,6 +944,14 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_fb_present();
     case SYS_FB_BLIT:
         return sys_fb_blit(a);
+    case SYS_TCP_CONNECT:
+        return sys_tcp_connect(a, b, c);
+    case SYS_TCP_SEND:
+        return sys_tcp_send(a, b);
+    case SYS_TCP_RECV:
+        return sys_tcp_recv(a, b);
+    case SYS_TCP_CLOSE:
+        return sys_tcp_close();
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;
