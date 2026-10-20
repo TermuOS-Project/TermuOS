@@ -330,6 +330,13 @@ static void put_u64_user(process_t *proc, uint64_t uva, uint64_t val)
 
 static void put_bytes_user(process_t *proc, uint64_t uva, const void *src, size_t n)
 {
+  if (n == 0)
+    return;
+  if (!on_user_stack(uva) || !on_user_stack(uva + n - 1)) {
+    kprintf("exec: put_bytes off stack uva=0x%x n=%u\n",
+            (unsigned long)uva, (unsigned long)n);
+    return;
+  }
   copy_to_user(proc, uva, src, n);
 }
 
