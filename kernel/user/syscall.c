@@ -794,8 +794,11 @@ static long sys_fb_blit(uint64_t uaddr)
     return 0;
 }
 
+extern volatile int g_in_syscall;
+
 static long sys_tcp_connect(uint64_t ip_uva, uint64_t port, uint64_t local_port)
 {
+    g_in_syscall = 1;
     process_t *proc = cur_proc();
     uint8_t raw[4];
     ip4_t ip;
@@ -815,11 +818,13 @@ static long sys_tcp_connect(uint64_t ip_uva, uint64_t port, uint64_t local_port)
     if (port == 0 || port > 65535)
         return -1;
 
+    g_in_syscall = 0;
     return tcp_connect(ip, (uint16_t)port, (uint16_t)local_port);
 }
 
 static long sys_tcp_send(uint64_t uva, uint64_t len)
 {
+    g_in_syscall = 1;
     process_t *proc = cur_proc();
     uint8_t tmp[1400];
 
@@ -830,11 +835,13 @@ static long sys_tcp_send(uint64_t uva, uint64_t len)
     if (copy_from_user(proc, tmp, uva, (size_t)len) < 0)
         return -1;
 
+    g_in_syscall = 0;
     return tcp_send(tmp, (size_t)len);
 }
 
 static long sys_tcp_recv(uint64_t uva, uint64_t max)
 {
+    g_in_syscall = 1;
     process_t *proc = cur_proc();
     uint8_t tmp[512];
 
@@ -861,6 +868,7 @@ static long sys_tcp_recv(uint64_t uva, uint64_t max)
         return 0;
     if (copy_to_user(proc, uva, tmp, (size_t)n) < 0)
         return -1;
+    g_in_syscall = 0;
     return n;
 }
 

@@ -15,16 +15,19 @@ static inline void outb(uint16_t port, uint8_t val)
     __asm__ volatile("outb %0, %1" ::"a"(val), "Nd"(port));
 }
 
+extern volatile int g_in_syscall;
+
 static void pit_irq(registers_t *r)
 {
-    (void)r;
     timer_ticks++;
 
-    if (timer_ticks % 50 == 0) {
+    if (timer_ticks % 50 == 0)
         terminal_cursor_tick();
-    }
 
-    scheduler_tick(r); // give the scheduler a chance to switch
+    if (g_in_syscall)
+        return;
+
+    scheduler_tick(r);
 }
 
 void pit_init(uint32_t hz)

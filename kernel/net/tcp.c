@@ -242,8 +242,17 @@ int tcp_is_established(void)
 
 int tcp_connect(ip4_t dst, uint16_t dst_port, uint16_t local_port)
 {
-    if (local_port == 0)
-        local_port = 50000;
+    memset(&tcp_pcb, 0, sizeof(tcp_pcb));
+    tcp_pcb.active = 1;
+
+    static uint16_t ephemeral = 50000;
+
+    if (local_port == 0) {
+        ephemeral++;
+        if (ephemeral < 50000 || ephemeral > 60000)
+            ephemeral = 50000;
+        local_port = ephemeral;
+    }
 
     tcp_pcb.active = 1;
     tcp_pcb.remote_ip = dst;

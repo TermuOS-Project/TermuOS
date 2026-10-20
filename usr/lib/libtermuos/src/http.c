@@ -48,6 +48,8 @@ int http_get(const uint8_t ip[4], uint16_t port,
     }
     out[got] = '\0';
     tcp_close();
+    for (volatile int i = 0; i < 500000; i++)
+        ;
     return (int)got;
 }
 

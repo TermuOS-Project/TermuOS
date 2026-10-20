@@ -237,3 +237,8 @@ void scheduler_tick(registers_t *r)
 
     preempt_switch(&threads[prev].rsp, threads[next].rsp, new_cr3);
 }
+
+volatile int g_in_syscall = 0;
+
+void sched_set_in_syscall(int v) { g_in_syscall = v; }
+int sched_in_syscall(void) { return g_in_syscall; }
