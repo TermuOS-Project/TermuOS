@@ -14,6 +14,7 @@
 #include "../fs/vfs.h"
 #include "../mm/pmm.h"
 #include "../mm/vmm.h"
+#include "../mm/heap.h"
 #include "../ipc/port.h"
 #include "../proc/launch.h"
 #include "../proc/process.h"
@@ -553,6 +554,52 @@ static uint64_t sys_port_create(uint64_t name_addr)
     return (uint64_t)(p - port_pool);
 }
 
+static uint64_t sys_port_try_receive(uint64_t idx, uint64_t out_addr)
+{
+    process_t *proc = cur_proc();
+
+    if (!proc || !proc_check_perm(PERM_IPC_RECEIVE))
+        return (uint64_t)-1;
+
+    extern port_t port_pool[];
+    extern uint8_t port_used[];
+    if (idx >= 32 || !port_used[idx])
+        return (uint64_t)-1;
+
+    ipc_message_t msg;
+    if (port_try_receive(&port_pool[idx], &msg) != 0)
+        return (uint64_t)-1;
+
+    uint8_t out[20 + IPC_INLINE_MAX];
+    for (size_t i = 0; i < sizeof out; i++)
+        out[i] = 0;
+
+    uint32_t *u32 = (uint32_t *)out;
+    uint64_t *data_ptr = (uint64_t *)(out + 8);
+    uint8_t *inlined = out + 20;
+
+    u32[0] = msg.sender_pid;
+    u32[1] = msg.code;
+    u32[4] = msg.length;
+
+    uint32_t copy_len = msg.length < IPC_INLINE_MAX ? msg.length : IPC_INLINE_MAX;
+    if (msg.data && copy_len > 0) {
+        uint8_t *src = (uint8_t *)msg.data;
+        for (uint32_t i = 0; i < copy_len; i++)
+            inlined[i] = src[i];
+    }
+
+    *data_ptr = out_addr + 20;
+
+    if (msg.data)
+        kfree(msg.data);
+
+    if (copy_to_user(proc, out_addr, out, sizeof out) < 0)
+        return (uint64_t)-1;
+
+    return 0;
+}
+
 struct fb_info_user
 {
     uint64_t width, height, pitch;
@@ -918,6 +965,8 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_port_receive(a, b);
     case SYS_PORT_CREATE:
         return sys_port_create(a);
+    case SYS_PORT_TRYRECEIVE:
+        return sys_port_try_receive(a, b);
     case SYS_FB_INFO:
         return sys_fb_info(a);
     case SYS_FB_CLEAR:

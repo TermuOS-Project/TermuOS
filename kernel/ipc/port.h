@@ -45,6 +45,7 @@ port_t *port_create(const char *name);
 port_t *port_find(const char *name);
 int port_send(port_t *port, uint32_t code, void *data, uint32_t length);
 int port_receive(port_t *port, ipc_message_t *out); // blocks if empty
+int port_try_receive(port_t *port, ipc_message_t *out);
 void port_destroy(port_t *port);
 
 extern object_type_t ObTypePort;

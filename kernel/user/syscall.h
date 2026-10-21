@@ -42,6 +42,7 @@
 #define SYS_PORT_SEND 301
 #define SYS_PORT_RECEIVE 302
 #define SYS_PORT_CREATE 303
+#define SYS_PORT_TRYRECEIVE 304
 #define SYS_LSDRV 501
 
 void syscall_init(void);

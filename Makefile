@@ -254,7 +254,8 @@ TERMUOS_LIB_SRCS := \
 	$(TERMUOS_LIB_DIR)/src/rtc.c \
 	$(TERMUOS_LIB_DIR)/src/dirent.c \
 	$(TERMUOS_LIB_DIR)/src/tcp.c \
-	$(TERMUOS_LIB_DIR)/src/http.c
+	$(TERMUOS_LIB_DIR)/src/http.c \
+	$(TERMUOS_LIB_DIR)/src/ipc.c
 
 TERMUOS_LIB_OBJS := $(patsubst $(TERMUOS_LIB_DIR)/src/%.c,$(TERMUOS_LIB_OUT)/%.o,$(TERMUOS_LIB_SRCS))
 TERMUOS_HDRS     := $(wildcard $(TERMUOS_LIB_DIR)/include/*.h)

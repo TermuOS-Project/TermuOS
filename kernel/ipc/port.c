@@ -221,6 +221,26 @@ int port_receive(port_t *port, ipc_message_t *out)
   return 0;
 }
 
+int port_try_receive(port_t *port, ipc_message_t *out)
+{
+  if (!port || !out)
+    return -1;
+
+  __asm__ volatile("cli");
+
+  if (port->count == 0) {
+    __asm__ volatile("sti");
+    return -1;
+  }
+
+  *out = port->queue[port->head];
+  port->head = (port->head + 1) % PORT_QUEUE_SIZE;
+  port->count--;
+
+  __asm__ volatile("sti");
+  return 0;
+}
+
 // Destroy a port
 void port_destroy(port_t *port)
 {
