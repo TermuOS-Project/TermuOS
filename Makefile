@@ -39,7 +39,7 @@ quiet_LD  = $(Q)printf "  ${C_LD}[LD]${C_RESET}   %s\n" "$@";
 # ---------------------------------------------------------------------------
 # Default goal FIRST
 # ---------------------------------------------------------------------------
-.PHONY: all iso run clean tsys tsys-clean tsys-install usr usr-clean luna test test-img
+.PHONY: all iso run clean tsys tsys-clean tsys-install usr usr-clean luna libluna test test-img
 
 all: iso
 
@@ -207,9 +207,20 @@ disk.img: tools/mkfs_tfs
 LUNA_DIR := usr/src/luna
 LUNA_BIN := $(LUNA_DIR)/luna.tsys
 
+LIBLUNA_DIR := usr/lib/libluna
+LIBLUNA_A := $(LIBLUNA_DIR)/libluna.a
+LIBLUNA_INC := -I$(LIBLUNA_DIR)/include
+
 TLIBC_DIR := usr/lib/tlibc
 TLIBC_A   := $(TLIBC_DIR)/libtlibc.a
 TLIBC_INC := -I$(TLIBC_DIR)/include
+
+.PHONY: libluna
+libluna:
+	$(Q)$(MAKE) -C $(LIBLUNA_DIR) TERMUOS_ROOT=$(CURDIR)
+
+$(LIBLUNA_A):
+	$(Q)$(MAKE) -C $(LIBLUNA_DIR) TERMUOS_ROOT=$(CURDIR)
 
 .PHONY: luna tlibc
 luna: $(TERMUOS_LIB_A) $(TLIBC_A)
@@ -311,10 +322,10 @@ $(TSYS_OUT)/hello_tlibc.tsys: tsys/hello_tlibc/hello.c $(TSYS_CRT0) $(TERMUOS_LI
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/hello_tlibc/hello.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-$(TSYS_OUT)/about.tsys: usr/src/about/main.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+$(TSYS_OUT)/about.tsys: usr/src/about/main.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(LIBLUNA_A) $(TSYS_HDRS) | $(TSYS_OUT)
 	$(Q)printf "  [TSYS]  about.tsys\n"
-	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
-		$(TSYS_CRT0) usr/src/about/main.c $(TLIBC_A) $(TERMUOS_LIB_A)
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) $(LIBLUNA_INC) -o $@ \
+		$(TSYS_CRT0) usr/src/about/main.c $(LIBLUNA_A) $(TERMUOS_LIB_A) $(TLIBC_A)
 
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
@@ -323,7 +334,7 @@ $(TSYS_OUT)/about.tsys: usr/src/about/main.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLI
 
 TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys $(TSYS_OUT)/about.tsys
 
-tsys: tlibc $(TSYS_BINS)
+tsys: tlibc $(TERMUOS_LIB_A) $(LIBLUNA_A) $(TSYS_BINS)
 
 tsys-clean:
 	rm -rf $(TSYS_OUT)
@@ -404,3 +415,4 @@ clean:
 	@rm -rf $(BUILD_DIR) $(KERNEL) termuos.iso iso/ disk.img test.img tests-serial.log
 	@$(MAKE) -C $(LUNA_DIR) clean 2>/dev/null || true
 	@$(MAKE) -C $(TLIBC_DIR) clean 2>/dev/null || true
+	@$(MAKE) -C $(LIBLUNA_DIR) clean 2>/dev/null || true
