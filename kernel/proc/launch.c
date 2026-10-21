@@ -6,6 +6,7 @@
 #include "../sched/scheduler.h"
 #include "../user/userspace.h"
 #include "../lib/printf.h"
+#include "../arch/x86_64/gdt.h"
 #include <stdint.h>
 
 static void exec_thread_entry()
@@ -15,10 +16,11 @@ static void exec_thread_entry()
 
   proc_set_perm_mask(ctx->perm_mask);
 
+  if (self->kstack_top)
+    tss_set_kernel_stack(self->kstack_top);
+
   vmm_switch(ctx->pagemap);
-  
   jump_userspace(ctx->entry, ctx->stack_top);
-  
   thread_exit();
 }
 

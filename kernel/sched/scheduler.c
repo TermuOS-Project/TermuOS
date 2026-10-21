@@ -2,6 +2,7 @@
 #include "../mm/heap.h"
 #include "../lib/printf.h"
 #include "../ob/object.h"
+#include "../arch/x86_64/gdt.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -17,6 +18,14 @@ static void sched_update_syscall_stack(void)
     thread_t *t = &threads[current];
     syscall_user_rsp_ptr = &t->syscall_user_rsp;
     syscall_kstack_top   = t->kstack_top;
+}
+
+static void sched_load_thread(int idx)
+{
+    current = idx;
+    sched_update_syscall_stack();
+    if (threads[idx].kstack_top)
+        tss_set_kernel_stack(threads[idx].kstack_top);
 }
 
 extern void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
@@ -200,9 +209,7 @@ void scheduler_yield(void)
         threads[prev].state = THREAD_READY;
 
     threads[next].state = THREAD_RUNNING;
-    current = next;
-
-    sched_update_syscall_stack();
+    sched_load_thread(next);
 
     if (threads[prev].owner != threads[next].owner)
         vmm_switch(threads[next].owner->pagemap);
@@ -227,9 +234,7 @@ void scheduler_tick(registers_t *r)
     if (threads[prev].state == THREAD_RUNNING)
         threads[prev].state = THREAD_READY;
     threads[next].state = THREAD_RUNNING;
-    current = next;
-
-    sched_update_syscall_stack();
+    sched_load_thread(next);
 
     uint64_t new_cr3 = 0;
     if (threads[prev].owner != threads[next].owner)
