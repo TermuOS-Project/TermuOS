@@ -104,6 +104,7 @@ SRCS += \
        kernel/drivers/net/pci.c \
        kernel/drivers/net/virtio_net.c \
 	   kernel/drivers/gpu/virtio_gpu_vq.c \
+	   kernel/drivers/speaker/speaker.c \
        kernel/net/net.c \
 	   kernel/net/tcp.c \
 	   kernel/drivers/driver.c
@@ -404,6 +405,7 @@ run: iso $(DISK_IMG)
 		-netdev user,id=net0,hostfwd=tcp::8080-:8080 \
 		-device virtio-net-pci,netdev=net0,disable-modern=on \
 		-device virtio-gpu-pci \
+		-machine pcspk-audiodev=snd -audiodev pa,id=snd \
 		-drive file=$(DISK_IMG),format=raw,if=ide \
 		-serial stdio 
 
