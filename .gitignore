@@ -12,3 +12,5 @@ apps/hello_libc/hello_libc
 libc/build/
 test.img
 tests-serial.log
+*.o
+*.a
