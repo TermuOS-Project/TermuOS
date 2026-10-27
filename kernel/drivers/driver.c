@@ -100,11 +100,13 @@ extern void rtc_driver_register(void);
 extern void virtio_net_register();
 extern void virtio_gpu_driver_register(void);
 extern void speaker_driver_register(void);
+extern void virtio_snd_driver_register(void);
 
 void drivers_register_all(void)
 {
     rtc_driver_register();
     virtio_gpu_driver_register();
     virtio_net_register();
+    virtio_snd_driver_register();
     speaker_driver_register();
 }
