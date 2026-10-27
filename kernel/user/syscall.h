@@ -37,6 +37,9 @@
 #define SYS_TCP_SEND 71
 #define SYS_TCP_RECV 72
 #define SYS_TCP_CLOSE 73
+#define SYS_OB_OPEN 80
+#define SYS_OB_CLOSE 81
+#define SYS_OB_DUP 82
 #define SYS_UPTIME 201
 #define SYS_PORT_FIND 300
 #define SYS_PORT_SEND 301

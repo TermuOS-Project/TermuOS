@@ -413,6 +413,8 @@ void handle_table_init(handle_table_t *ht)
 
 int handle_alloc(handle_table_t *ht, object_header_t *obj, uint32_t access)
 {
+    if (!ht || !obj)
+        return -1;
     for (int i = 0; i < MAX_HANDLES; i++)
     {
         if (!ht->entries[i].object)
@@ -423,7 +425,6 @@ int handle_alloc(handle_table_t *ht, object_header_t *obj, uint32_t access)
             return i;
         }
     }
-    kprintf("ob: handle table full\n");
     return -1;
 }
 
