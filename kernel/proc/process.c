@@ -136,6 +136,9 @@ void proc_exit(process_t *proc, int32_t code)
     ob_deref(proc->ob_header);
     proc->ob_header = NULL;
   }
+
+  for (int i = 0; i < MAX_HANDLES; i++)
+    handle_close(&proc->handles, i);
 }
 
 void proc_list(void)
@@ -206,4 +209,9 @@ int proc_kill(uint32_t pid)
     return -1;
   proc_exit(p, -1);
   return 0;
+}
+
+handle_table_t *proc_handles(process_t *p)
+{
+  return p ? &p->handles : NULL;
 }

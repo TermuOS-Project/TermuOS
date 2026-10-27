@@ -35,3 +35,4 @@ process_t *proc_get(uint32_t pid);
 process_t *proc_kernel(void); // returns pid-0 kernel process
 int proc_snapshot(process_t *out, int max_out);
 int proc_kill(uint32_t pid);
+handle_table_t *proc_handles(process_t *p);
