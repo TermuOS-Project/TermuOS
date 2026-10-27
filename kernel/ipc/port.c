@@ -30,10 +30,6 @@ static int strcmp_s(const char *a, const char *b)
   return *a - *b;
 }
 
-// Port object type
-static void port_delete_cb(object_header_t *obj) { (void)obj; }
-object_type_t ObTypePort = {"Port", port_delete_cb};
-
 // Port storage pool
 #define MAX_PORTS 32
 port_t port_pool[MAX_PORTS];
@@ -45,7 +41,6 @@ void ipc_init(void)
   for (int i = 0; i < MAX_PORTS; i++)
     port_used[i] = 0;
 
-  ob_mkdir("\\Port");
   kprintf("ipc: port subsystem ready\n");
 }
 

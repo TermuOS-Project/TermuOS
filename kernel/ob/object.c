@@ -44,16 +44,87 @@ static void proc_delete(object_header_t *obj)
     (void)obj;
     kprintf("ob: process deleted\n");
 }
+
 static void thread_delete(object_header_t *obj)
 {
     (void)obj;
     kprintf("ob: thread deleted\n");
 }
-static void dir_delete(object_header_t *obj) { (void)obj; }
+
+static void dir_delete(object_header_t *obj)
+{
+    (void)obj;
+}
+
+static void device_delete(object_header_t *obj)
+{
+    (void)obj;
+    kprintf("ob: device deleted\n");
+}
+
+static void driver_delete(object_header_t *obj)
+{
+    (void)obj;
+    kprintf("ob: driver deleted\n");
+}
+
+static void event_delete(object_header_t *obj)
+{
+    (void)obj;
+    kprintf("ob: event deleted\n");
+}
+
+static void port_delete(object_header_t *obj)
+{
+    (void)obj;
+    kprintf("ob: port deleted\n");
+}
+
+static void file_delete(object_header_t *obj)
+{
+    (void)obj;
+    kprintf("ob: file deleted\n");
+}
 
 object_type_t ObTypeProcess = {"Process", proc_delete};
 object_type_t ObTypeThread = {"Thread", thread_delete};
 object_type_t ObTypeDirectory = {"Directory", dir_delete};
+object_type_t ObTypeDevice = { "Device", device_delete };
+object_type_t ObTypeDriver = { "Driver", driver_delete };
+object_type_t ObTypeEvent    = { "Event",    event_delete };
+object_type_t ObTypePort     = { "Port",     port_delete };
+object_type_t ObTypeFile     = { "File",     file_delete };
+
+/* Type registry */
+static object_type_t *type_table[OB_TYPE_MAX];
+static int type_count;
+
+void ob_type_register(object_type_t *type)
+{
+    if (!type || !type->name || type_count >= OB_TYPE_MAX)
+        return;
+    for (int i = 0; i < type_count; i++)
+        if (type_table[i] == type || ob_strcmp(type_table[i]->name, type->name) == 0)
+            return;
+    type_table[type_count++] = type;
+}
+
+object_type_t *ob_type_find(const char *name)
+{
+    if (!name)
+        return NULL;
+    for (int i = 0; i < type_count; i++)
+        if (ob_strcmp(type_table[i]->name, name) == 0)  
+            return type_table[i];
+    return NULL;
+}
+
+void ob_type_list(void)
+{
+    kprintf("ob: types (%d)\n", type_count);
+    for (int i = 0; i < type_count; i++)
+        kprintf("  %s\n", type_table[i]->name);
+}
 
 /* Object pool */
 #define OB_POOL_SIZE 256
@@ -93,7 +164,16 @@ void ob_init(void)
     for (int i = 0; i < OB_POOL_SIZE; i++)
         ob_pool_used[i] = 0;
 
-    /* Set up the root directory. */
+    type_count = 0;
+    ob_type_register(&ObTypeDirectory);
+    ob_type_register(&ObTypeProcess);
+    ob_type_register(&ObTypeThread);
+    ob_type_register(&ObTypeDevice);
+    ob_type_register(&ObTypeDriver);
+    ob_type_register(&ObTypeEvent);
+    ob_type_register(&ObTypePort);
+    ob_type_register(&ObTypeFile);
+
     ns_root.type = &ObTypeDirectory;
     ns_root.ref_count = 1;
     ns_root.ns_parent = NULL;
@@ -102,7 +182,15 @@ void ob_init(void)
     ns_root.body = NULL;
     ob_strcpy(ns_root.name, "\\", OB_NAME_MAX);
 
+    ob_mkdir("\\Driver");
+    ob_mkdir("\\Device");
+    ob_mkdir("\\Process");
+    ob_mkdir("\\Thread");
+    ob_mkdir("\\Port");
+    ob_mkdir("\\Event");
+
     kprintf("ob: object manager ready\n");
+    ob_type_list();
 }
 
 /* Object lifecycle */

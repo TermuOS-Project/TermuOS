@@ -40,7 +40,6 @@ void scheduler_init(void)
     threads[0].stack_top = 0;
     __builtin_memcpy(threads[0].name, "idle", 5);
     threads[0].owner = proc_kernel();
-    ob_mkdir("\\Thread");
     threads[0].ob_header = ob_create(&ObTypeThread, "0", &threads[0]);
     ob_insert("\\Thread\\0", threads[0].ob_header);
 

@@ -19,6 +19,7 @@ typedef struct
 
 // object header - prepended to every managed object
 #define OB_NAME_MAX 32
+#define OB_TYPE_MAX 32
 
 struct object_header
 {
@@ -49,9 +50,19 @@ typedef struct
 extern object_type_t ObTypeProcess;
 extern object_type_t ObTypeThread;
 extern object_type_t ObTypeDirectory;
+extern object_type_t ObTypeDevice;
+extern object_type_t ObTypeDriver;
+extern object_type_t ObTypeEvent;
+extern object_type_t ObTypePort;
+extern object_type_t ObTypeFile;
 
 // API
 void ob_init(void);
+
+// type registry
+void ob_type_register(object_type_t *type);
+object_type_t *ob_type_find(const char *name);
+void ob_type_list(void);
 
 // object lifecycle
 object_header_t *ob_create(object_type_t *type, const char *name, void *body);

@@ -41,7 +41,6 @@ void proc_init(void)
   kprintf("proc: kernel process created (pid 0)\n");
   handle_table_init(&kproc->handles);
   kproc->ob_header = ob_create(&ObTypeProcess, "kernel", kproc);
-  ob_mkdir("\\Process");
   ob_insert("\\Process\\0", kproc->ob_header);
   __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
   proc_kernel()->pagemap = cr3 & ~0xFFFULL;

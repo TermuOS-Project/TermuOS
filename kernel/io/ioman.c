@@ -5,13 +5,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* Object types */
-static void driver_delete(object_header_t *o) { (void)o; }
-static void device_delete(object_header_t *o) { (void)o; }
-
-static object_type_t ObTypeDriver = {"Driver", driver_delete};
-static object_type_t ObTypeDevice = {"Device", device_delete};
-
 /* Static pools */
 #define MAX_DRIVERS 16
 #define MAX_DEVICES 32
@@ -50,9 +43,6 @@ void ioman_init(void)
         driver_used[i] = 0;
     for (int i = 0; i < MAX_DEVICES; i++)
         device_used[i] = 0;
-
-    ob_mkdir("\\Driver");
-    ob_mkdir("\\Device");
 
     kprintf("ioman: I/O Manager ready\n");
 }
