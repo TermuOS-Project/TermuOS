@@ -70,8 +70,10 @@ static void driver_delete(object_header_t *obj)
 
 static void event_delete(object_header_t *obj)
 {
-    (void)obj;
-    kprintf("ob: event deleted\n");
+    if (obj && obj->body) {
+        kfree(obj->body);
+        obj->body = NULL;
+    }
 }
 
 static void port_delete(object_header_t *obj)
