@@ -1,17 +1,25 @@
+extern "C" {
 #include "Kernel.h"
+}
 
-thread_t threads[MAX_THREADS];
+extern "C" {
+
+thread_t thread[MAX_THREADS];
 int current = 0;
+volatile int g_in_syscall = 0;
+
+}
+
 static int initialized = 0;
 
 uint64_t *syscall_user_rsp_ptr;
-uint64_t  syscall_kstack_top;
+uint64_t syscall_kstack_top;
 
 static void sched_update_syscall_stack(void)
 {
     thread_t *t = &threads[current];
     syscall_user_rsp_ptr = &t->syscall_user_rsp;
-    syscall_kstack_top   = t->kstack_top;
+    syscall_kstack_top = t->kstack_top;
 }
 
 static void sched_load_thread(int idx)
@@ -22,9 +30,10 @@ static void sched_load_thread(int idx)
         tss_set_kernel_stack(threads[idx].kstack_top);
 }
 
-extern void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
+extern "C" void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
+extern "C" void preempt_switch(uint64_t *old_rsp, uint64_t new_rsp, uint64_t new_cr3);
 
-void scheduler_init(void)
+extern "C" void scheduler_init(void)
 {
     for (int i = 0; i < MAX_THREADS; i++)
         threads[i].state = THREAD_DEAD;
@@ -40,86 +49,78 @@ void scheduler_init(void)
     current = 0;
     initialized = 1;
 
-    uint8_t *ks = kmalloc(8192);
+    uint8_t *ks = static_cast<uint8_t *>(kmalloc(8192));
     threads[0].kstack_mem = ks;
-    threads[0].kstack_top = ks ? (uint64_t)(ks + 8192) : 0;
+    threads[0].kstack_top = ks ? reinterpret_cast<uint64_t>(ks + 8192) : 0;
     threads[0].syscall_user_rsp = 0;
 
     sched_update_syscall_stack();
 }
 
-thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
+extern "C" thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
 {
     int slot = -1;
-    for (int i = 1; i < MAX_THREADS; i++)
-        if (threads[i].state == THREAD_DEAD)
-        {
+    for (int i = 1; i < MAX_THREADS; i++) {
+        if (threads[i].state == THREAD_DEAD) {
             slot = i;
             break;
         }
-    if (slot < 0)
-    {
+    }
+    if (slot < 0) {
         kprintf("scheduler: no free slots\n");
-        return NULL;
+        return nullptr;
     }
 
-    uint8_t *stack = (uint8_t *)kmalloc(STACK_SIZE);
-    if (!stack)
-    {
+    uint8_t *stack = static_cast<uint8_t *>(kmalloc(STACK_SIZE));
+    if (!stack) {
         kprintf("scheduler: no memory\n");
-        return NULL;
+        return nullptr;
     }
 
     thread_t *t = &threads[slot];
-    t->id = slot;
+    t->id = static_cast<uint64_t>(slot);
     t->state = THREAD_READY;
-    t->stack_top = (uint64_t)(stack + STACK_SIZE);
+    t->stack_top = reinterpret_cast<uint64_t>(stack + STACK_SIZE);
 
     int i = 0;
-    while (name[i] && i < 31)
-    {
+    while (name[i] && i < 31) {
         t->name[i] = name[i];
         i++;
     }
-    t->name[i] = '\0';
+    t->name[i];
     t->owner = owner ? owner : proc_kernel();
 
-    uint8_t *ks = kmalloc(8192);
+    uint8_t *ks = static_cast<uint8_t *>(kmalloc(8192));
     t->kstack_mem = ks;
-    t->kstack_top = ks ? (uint64_t)(ks + 8192) : 0;
+    t->kstack_top = ks ? reinterpret_cast<uint64_t>(ks + 8192) : 0;
     t->syscall_user_rsp = 0;
 
-    uint64_t *sp = (uint64_t *)t->stack_top;
-    *--sp = (uint64_t)thread_exit;
-    *--sp = (uint64_t)entry;
+    uint64_t *sp = reinterpret_cast<uint64_t *>(t->stack_top);
+    *--sp = reinterpret_cast<uint64_t>(&thread_exit);
+    *--sp = reinterpret_cast<uint64_t>(entry);
     *--sp = 0; // rbp
     *--sp = 0; // rbx
     *--sp = 0; // r12
     *--sp = 0; // r13
     *--sp = 0; // r14
     *--sp = 0; // r15
-    t->rsp = (uint64_t)sp;
+    t->rsp = reinterpret_cast<uint64_t>(sp);
 
     char ob_path[32];
     const char *prefix = "\\Thread\\";
     int pi = 0;
-    while (prefix[pi])
-    {
+    while (prefix[pi]) {
         ob_path[pi] = prefix[pi];
         pi++;
     }
     uint64_t id_tmp = t->id;
-    if (id_tmp == 0)
-    {
+    if (id_tmp == 0) {
         ob_path[pi++] = '0';
-    }
-    else
-    {
+    } else {
         char tmp[16];
         int ti = 0;
-        while (id_tmp)
-        {
-            tmp[ti++] = '0' + (id_tmp % 10);
+        while (id_tmp) {
+            tmp[ti++] = static_cast<char>('0' + (id_tmp % 10));
             id_tmp /= 10;
         }
         while (ti > 0)
@@ -132,7 +133,7 @@ thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
     return t;
 }
 
-void thread_exit(void)
+extern "C" void thread_exit(void)
 {
     __asm__ volatile("cli");
     threads[current].state = THREAD_DEAD;
@@ -142,13 +143,13 @@ void thread_exit(void)
         __asm__ volatile("hlt");
 }
 
-void thread_block(void)
+extern "C" void thread_block(void)
 {
     threads[current].state = THREAD_BLOCKED;
     scheduler_yield();
 }
 
-void thread_unblock(thread_t *t)
+extern "C" void thread_unblock(thread_t *t)
 {
     __asm__ volatile("cli");
     if (t->state == THREAD_BLOCKED)
@@ -156,17 +157,18 @@ void thread_unblock(thread_t *t)
     __asm__ volatile("sti");
 }
 
-thread_t *thread_current(void) { return &threads[current]; }
+extern "C" thread_t *thread_current(void)
+{
+    return &threads[current];
+}
 
 static int next_thread(void)
 {
-    for (int pass = 0; pass < 2; pass++)
-    {
-        for (int i = 1; i < MAX_THREADS; i++)
-        {
+    for (int pass = 0; pass < 2; pass++) {
+        for (int i = 1; i < MAX_THREADS; i++) {
             int idx = (current + i) % MAX_THREADS;
             if (idx == 0)
-                continue; /* skip idle */
+                continue;
 
             if (threads[idx].state == THREAD_DEAD ||
                 threads[idx].state == THREAD_BLOCKED)
@@ -181,7 +183,7 @@ static int next_thread(void)
     return -1;
 }
 
-void scheduler_yield(void)
+extern "C" void scheduler_yield(void)
 {
     if (!initialized)
         return;
@@ -191,8 +193,7 @@ void scheduler_yield(void)
     int prev = current;
     int next = next_thread();
 
-    if (next < 0)
-    {
+    if (next < 0) {
         __asm__ volatile("sti");
         __asm__ volatile("hlt");
         return;
@@ -211,7 +212,7 @@ void scheduler_yield(void)
     context_switch(&threads[prev].rsp, threads[next].rsp);
 }
 
-void scheduler_tick(registers_t *r)
+extern "C" void scheduler_tick(registers_t *r)
 {
     (void)r;
     if (!initialized)
@@ -219,9 +220,9 @@ void scheduler_tick(registers_t *r)
 
     int next = next_thread();
     if (next < 0)
-        return; // nothing to switch to
+        return;
     if (next == current)
-        return; // already the best choice
+        return;
 
     int prev = current;
     if (threads[prev].state == THREAD_RUNNING)
@@ -236,7 +237,12 @@ void scheduler_tick(registers_t *r)
     preempt_switch(&threads[prev].rsp, threads[next].rsp, new_cr3);
 }
 
-volatile int g_in_syscall = 0;
+extern "C" void sched_set_in_syscall(int v)
+{
+    g_in_syscall = v;
+}
 
-void sched_set_in_syscall(int v) { g_in_syscall = v; }
-int sched_in_syscall(void) { return g_in_syscall; }
+extern "C" int sched_in_syscall(void)
+{
+    return g_in_syscall;
+}

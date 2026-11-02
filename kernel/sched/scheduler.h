@@ -31,6 +31,10 @@ typedef struct thread
     uint8_t *kstack_mem;
 } thread_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern thread_t threads[MAX_THREADS];
 extern int current;
 
@@ -42,7 +46,13 @@ void thread_unblock(thread_t *t);
 thread_t *thread_current(void);
 void scheduler_tick(registers_t *r);
 void scheduler_yield(void);
+
 void preempt_switch(uint64_t *old_rsp, uint64_t new_rsp, uint64_t new_cr3);
 void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
+
 void sched_set_in_syscall(int v);
 int sched_in_syscall(void);
+
+#ifdef __cplusplus
+}
+#endif

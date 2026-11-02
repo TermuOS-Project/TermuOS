@@ -78,12 +78,12 @@ SRCS += \
        kernel/lib/printf.c \
        kernel/lib/string.c
 
-CPPSRCS += kernel/lib/cxxabi.cpp
+CPPSRCS += kernel/lib/cxxabi.cpp \
+		   kernel/sched/scheduler.cpp
 
 SRCS += \
        kernel/drivers/input/keyboard.c \
-       kernel/drivers/input/mouse.c \
-       kernel/sched/scheduler.c
+       kernel/drivers/input/mouse.c
 
 SRCS += kernel/proc/process.c
 SRCS += kernel/ob/object.c \
