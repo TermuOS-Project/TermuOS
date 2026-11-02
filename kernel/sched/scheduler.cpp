@@ -3,43 +3,98 @@ extern "C" {
 }
 
 extern "C" {
-
 thread_t threads[MAX_THREADS];
 int current = 0;
 volatile int g_in_syscall = 0;
-
 }
 
-static int initialized = 0;
+extern "C" void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
+extern "C" void preempt_switch(uint64_t *old_rsp, uint64_t new_rsp, uint64_t new_cr3);
+
+enum class ThreadState : int {
+    Dead    = THREAD_DEAD,
+    Ready   = THREAD_READY,
+    Running = THREAD_RUNNING,
+    Blocked = THREAD_BLOCKED,
+};
+
+static inline ThreadState state_of(const thread_t &t)
+{
+    return static_cast<ThreadState>(t.state);
+}
+
+static inline void set_state(thread_t &t, ThreadState s)
+{
+    t.state = static_cast<thread_state_t>(s);
+}
 
 uint64_t *syscall_user_rsp_ptr;
 uint64_t syscall_kstack_top;
 
-static void sched_update_syscall_stack(void)
+class Scheduler {
+public:
+    void init();
+    thread_t *create(const char *name, void (*entry)(void), process_t *owner);
+    void exit_current();
+    void block_current();
+    void unblock(thread_t *t);
+    thread_t *current_thread();
+    void yield();
+    void tick(registers_t *r);
+
+private:
+    int initialized_ = 0;
+
+    void update_syscall_stack();
+    void load_thread(int idx);
+    int next_thread();
+};
+
+static Scheduler g_sched;
+
+void Scheduler::update_syscall_stack()
 {
     thread_t *t = &threads[current];
     syscall_user_rsp_ptr = &t->syscall_user_rsp;
     syscall_kstack_top = t->kstack_top;
 }
 
-static void sched_load_thread(int idx)
+void Scheduler::load_thread(int idx)
 {
     current = idx;
-    sched_update_syscall_stack();
+    update_syscall_stack();
     if (threads[idx].kstack_top)
         tss_set_kernel_stack(threads[idx].kstack_top);
 }
 
-extern "C" void context_switch(uint64_t *old_rsp, uint64_t new_rsp);
-extern "C" void preempt_switch(uint64_t *old_rsp, uint64_t new_rsp, uint64_t new_cr3);
+int Scheduler::next_thread()
+{
+    for (int pass = 0; pass < 2; pass++) {
+        for (int i = 1; i < MAX_THREADS; i++) {
+            int idx = (current + i) % MAX_THREADS;
+            if (idx == 0)
+                continue;
 
-extern "C" void scheduler_init(void)
+            ThreadState st = state_of(threads[idx]);
+            if (st == ThreadState::Dead || st == ThreadState::Blocked)
+                continue;
+
+            if (pass == 0 && st == ThreadState::Ready)
+                return idx;
+            if (pass == 1 && idx != current)
+                return idx;
+        }
+    }
+    return -1;
+}
+
+void Scheduler::init()
 {
     for (int i = 0; i < MAX_THREADS; i++)
-        threads[i].state = THREAD_DEAD;
+        set_state(threads[i], ThreadState::Dead);
 
     threads[0].id = 0;
-    threads[0].state = THREAD_RUNNING;
+    set_state(threads[0], ThreadState::Running);
     threads[0].stack_top = 0;
     __builtin_memcpy(threads[0].name, "idle", 5);
     threads[0].owner = proc_kernel();
@@ -47,21 +102,21 @@ extern "C" void scheduler_init(void)
     ob_insert("\\Thread\\0", threads[0].ob_header);
 
     current = 0;
-    initialized = 1;
+    initialized_ = 1;
 
     uint8_t *ks = static_cast<uint8_t *>(kmalloc(8192));
     threads[0].kstack_mem = ks;
     threads[0].kstack_top = ks ? reinterpret_cast<uint64_t>(ks + 8192) : 0;
     threads[0].syscall_user_rsp = 0;
 
-    sched_update_syscall_stack();
+    update_syscall_stack();
 }
 
-extern "C" thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
+thread_t *Scheduler::create(const char *name, void (*entry)(void), process_t *owner)
 {
     int slot = -1;
     for (int i = 1; i < MAX_THREADS; i++) {
-        if (threads[i].state == THREAD_DEAD) {
+        if (state_of(threads[i]) == ThreadState::Dead) {
             slot = i;
             break;
         }
@@ -79,15 +134,15 @@ extern "C" thread_t *thread_create(const char *name, void (*entry)(void), proces
 
     thread_t *t = &threads[slot];
     t->id = static_cast<uint64_t>(slot);
-    t->state = THREAD_READY;
+    set_state(*t, ThreadState::Ready);
     t->stack_top = reinterpret_cast<uint64_t>(stack + STACK_SIZE);
 
-    int i = 0;
-    while (name[i] && i < 31) {
-        t->name[i] = name[i];
-        i++;
+    int ni = 0;
+    while (name[ni] && ni < 31) {
+        t->name[ni] = name[ni];
+        ni++;
     }
-    t->name[i] = '\0';
+    t->name[ni] = '\0';
     t->owner = owner ? owner : proc_kernel();
 
     uint8_t *ks = static_cast<uint8_t *>(kmalloc(8192));
@@ -98,12 +153,12 @@ extern "C" thread_t *thread_create(const char *name, void (*entry)(void), proces
     uint64_t *sp = reinterpret_cast<uint64_t *>(t->stack_top);
     *--sp = reinterpret_cast<uint64_t>(&thread_exit);
     *--sp = reinterpret_cast<uint64_t>(entry);
-    *--sp = 0; // rbp
-    *--sp = 0; // rbx
-    *--sp = 0; // r12
-    *--sp = 0; // r13
-    *--sp = 0; // r14
-    *--sp = 0; // r15
+    *--sp = 0; /* rbp */
+    *--sp = 0; /* rbx */
+    *--sp = 0; /* r12 */
+    *--sp = 0; /* r13 */
+    *--sp = 0; /* r14 */
+    *--sp = 0; /* r15 */
     t->rsp = reinterpret_cast<uint64_t>(sp);
 
     char ob_path[32];
@@ -133,59 +188,38 @@ extern "C" thread_t *thread_create(const char *name, void (*entry)(void), proces
     return t;
 }
 
-extern "C" void thread_exit(void)
+void Scheduler::exit_current()
 {
     __asm__ volatile("cli");
-    threads[current].state = THREAD_DEAD;
+    set_state(threads[current], ThreadState::Dead);
     __asm__ volatile("sti");
-    scheduler_yield();
+    yield();
     for (;;)
         __asm__ volatile("hlt");
 }
 
-extern "C" void thread_block(void)
+void Scheduler::block_current()
 {
-    threads[current].state = THREAD_BLOCKED;
-    scheduler_yield();
+    set_state(threads[current], ThreadState::Blocked);
+    yield();
 }
 
-extern "C" void thread_unblock(thread_t *t)
+void Scheduler::unblock(thread_t *t)
 {
     __asm__ volatile("cli");
-    if (t->state == THREAD_BLOCKED)
-        t->state = THREAD_READY;
+    if (state_of(*t) == ThreadState::Blocked)
+        set_state(*t, ThreadState::Ready);
     __asm__ volatile("sti");
 }
 
-extern "C" thread_t *thread_current(void)
+thread_t *Scheduler::current_thread()
 {
     return &threads[current];
 }
 
-static int next_thread(void)
+void Scheduler::yield()
 {
-    for (int pass = 0; pass < 2; pass++) {
-        for (int i = 1; i < MAX_THREADS; i++) {
-            int idx = (current + i) % MAX_THREADS;
-            if (idx == 0)
-                continue;
-
-            if (threads[idx].state == THREAD_DEAD ||
-                threads[idx].state == THREAD_BLOCKED)
-                continue;
-
-            if (pass == 0 && threads[idx].state == THREAD_READY)
-                return idx;
-            if (pass == 1 && idx != current)
-                return idx;
-        }
-    }
-    return -1;
-}
-
-extern "C" void scheduler_yield(void)
-{
-    if (!initialized)
+    if (!initialized_)
         return;
 
     __asm__ volatile("cli");
@@ -199,11 +233,11 @@ extern "C" void scheduler_yield(void)
         return;
     }
 
-    if (threads[prev].state == THREAD_RUNNING)
-        threads[prev].state = THREAD_READY;
+    if (state_of(threads[prev]) == ThreadState::Running)
+        set_state(threads[prev], ThreadState::Ready);
 
-    threads[next].state = THREAD_RUNNING;
-    sched_load_thread(next);
+    set_state(threads[next], ThreadState::Running);
+    load_thread(next);
 
     if (threads[prev].owner != threads[next].owner)
         vmm_switch(threads[next].owner->pagemap);
@@ -212,29 +246,67 @@ extern "C" void scheduler_yield(void)
     context_switch(&threads[prev].rsp, threads[next].rsp);
 }
 
-extern "C" void scheduler_tick(registers_t *r)
+void Scheduler::tick(registers_t *r)
 {
     (void)r;
-    if (!initialized)
+    if (!initialized_)
         return;
 
     int next = next_thread();
-    if (next < 0)
-        return;
-    if (next == current)
+    if (next < 0 || next == current)
         return;
 
     int prev = current;
-    if (threads[prev].state == THREAD_RUNNING)
-        threads[prev].state = THREAD_READY;
-    threads[next].state = THREAD_RUNNING;
-    sched_load_thread(next);
+    if (state_of(threads[prev]) == ThreadState::Running)
+        set_state(threads[prev], ThreadState::Ready);
+    set_state(threads[next], ThreadState::Running);
+    load_thread(next);
 
     uint64_t new_cr3 = 0;
     if (threads[prev].owner != threads[next].owner)
         new_cr3 = threads[next].owner->pagemap;
 
     preempt_switch(&threads[prev].rsp, threads[next].rsp, new_cr3);
+}
+
+extern "C" void scheduler_init(void)
+{
+    g_sched.init();
+}
+
+extern "C" thread_t *thread_create(const char *name, void (*entry)(void), process_t *owner)
+{
+    return g_sched.create(name, entry, owner);
+}
+
+extern "C" void thread_exit(void)
+{
+    g_sched.exit_current();
+}
+
+extern "C" void thread_block(void)
+{
+    g_sched.block_current();
+}
+
+extern "C" void thread_unblock(thread_t *t)
+{
+    g_sched.unblock(t);
+}
+
+extern "C" thread_t *thread_current(void)
+{
+    return g_sched.current_thread();
+}
+
+extern "C" void scheduler_yield(void)
+{
+    g_sched.yield();
+}
+
+extern "C" void scheduler_tick(registers_t *r)
+{
+    g_sched.tick(r);
 }
 
 extern "C" void sched_set_in_syscall(int v)
