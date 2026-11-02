@@ -4,7 +4,7 @@ extern "C" {
 
 extern "C" {
 
-thread_t thread[MAX_THREADS];
+thread_t threads[MAX_THREADS];
 int current = 0;
 volatile int g_in_syscall = 0;
 
@@ -87,7 +87,7 @@ extern "C" thread_t *thread_create(const char *name, void (*entry)(void), proces
         t->name[i] = name[i];
         i++;
     }
-    t->name[i];
+    t->name[i] = '\0';
     t->owner = owner ? owner : proc_kernel();
 
     uint8_t *ks = static_cast<uint8_t *>(kmalloc(8192));

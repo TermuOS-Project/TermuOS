@@ -230,8 +230,7 @@ luna: $(TERMUOS_LIB_A) $(TLIBC_A)
 	$(Q)printf "  [USR]   luna\n"
 	$(Q)$(MAKE) -C $(LUNA_DIR) TERMUOS_ROOT=$(CURDIR)
 
-tlibc:
-	$(Q)$(MAKE) -C $(TLIBC_DIR)
+tlibc: $(TLIBC_A) $(TERMUOS_LIB_A) $(LIBLUNA_A) $(TSYS_BINS)
 
 $(TLIBC_A):
 	$(Q)$(MAKE) -C $(TLIBC_DIR)
