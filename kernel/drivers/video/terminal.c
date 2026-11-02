@@ -1,5 +1,4 @@
-#include "terminal.h"
-#include "fb.h"
+#include "Kernel.h"
 
 // Configuration
 

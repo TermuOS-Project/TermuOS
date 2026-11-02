@@ -1,11 +1,4 @@
-#include "port.h"
-#include "../ob/object.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include "../sched/scheduler.h"
-#include "../proc/process.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 // Small string helpers
 static void strcpy_s(char *d, const char *s, int max)

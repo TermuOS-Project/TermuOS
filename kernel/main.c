@@ -1,41 +1,4 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <limine.h>
-
-#include "drivers/video/fb.h"
-#include "drivers/video/terminal.h"
-#include "drivers/serial/serial.h"
-#include "drivers/input/keyboard.h"
-#include "drivers/input/mouse.h"
-#include "drivers/rtc_rust/rtc_rust.h"
-#include "arch/x86_64/idt.h"
-#include "arch/x86_64/gdt.h"
-#include "arch/x86_64/pit.h"
-#include "arch/x86_64/fpu.h"
-#include "mm/pmm.h"
-#include "mm/vmm.h"
-#include "mm/heap.h"
-#include "sched/scheduler.h"
-#include "fs/vfs.h"
-#include "fs/ramfs.h"
-#include "fs/tfs.h"
-#include "fs/devfs.h"
-#include "fs/install.h"
-#include "drivers/storage/ata.h"
-#include "drivers/net/pci.h"
-#include "drivers/driver.h"
-#include "shell/shell.h"
-#include "lib/printf.h"
-#include "lib/cxxabi.h"
-#include "lib/crc32.h"
-#include "lib/rdrand.h"
-#include "proc/process.h"
-#include "ob/object.h"
-#include "io/ioman.h"
-#include "ipc/port.h"
-#include "proc/exec.h"
-#include "proc/launch.h"
-#include "user/userspace.h"
+#include "Kernel.h"
 
 LIMINE_BASE_REVISION(3);
 

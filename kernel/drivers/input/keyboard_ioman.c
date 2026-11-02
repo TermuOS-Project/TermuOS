@@ -1,7 +1,4 @@
-#include "keyboard.h"
-#include "../../io/ioman.h"
-#include "../../lib/printf.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 static int kbd_dispatch_read(device_obj_t *dev, irp_t *irp)
 {

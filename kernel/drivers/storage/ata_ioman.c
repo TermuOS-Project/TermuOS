@@ -1,6 +1,4 @@
-#include "ata.h"
-#include "../../io/ioman.h"
-#include "../../lib/printf.h"
+#include "Kernel.h"
 
 static device_obj_t *ata_device = NULL;
 

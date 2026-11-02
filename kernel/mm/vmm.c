@@ -1,8 +1,4 @@
-#include "vmm.h"
-#include "pmm.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 #define PML4_IDX(v) (((v) >> 39) & 0x1ff)
 #define PDPT_IDX(v) (((v) >> 30) & 0x1ff)

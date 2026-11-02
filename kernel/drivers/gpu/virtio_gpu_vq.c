@@ -1,8 +1,4 @@
-#include "../net/pci.h"
-#include "../../lib/printf.h"
-#include "../../mm/vmm.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 #define PAGE_SIZE 4096
 #define PHYS_MASK 0x000FFFFFFFFFF000ULL

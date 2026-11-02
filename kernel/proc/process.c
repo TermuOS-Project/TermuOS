@@ -1,11 +1,4 @@
-#include "process.h"
-#include "../mm/vmm.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include "../ob/object.h"
-#include "../fs/vfs.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 static process_t proc_table[MAX_PROCESSES];
 static uint32_t next_pid = 0;

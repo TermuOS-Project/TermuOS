@@ -1,7 +1,4 @@
-#include "gdt.h"
-#include "../../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 // ─── GDT entry formats ────────────────────────────────────────────────────────
 

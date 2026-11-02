@@ -1,5 +1,4 @@
-#include "driver.h"
-#include "../lib/printf.h"
+#include "Kernel.h"
 
 #define MAX_DRIVERS 64
 

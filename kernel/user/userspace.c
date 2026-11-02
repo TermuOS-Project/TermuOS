@@ -1,10 +1,4 @@
-#include "userspace.h"
-#include "syscall.h"
-#include "../arch/x86_64/gdt.h"
-#include "../lib/printf.h"
-#include "../proc/process.h"
-#include "../sched/scheduler.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 void userspace_init(void)
 {

@@ -1,8 +1,4 @@
-#include "printf.h"
-#include "../drivers/video/terminal.h"
-#include "../drivers/serial/serial.h"
-#include <stdarg.h>
-#include <stdint.h>
+#include "Kernel.h"
 
 static void default_putchar(char c)
 {

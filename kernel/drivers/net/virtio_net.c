@@ -1,13 +1,4 @@
-#include "virtio_net.h"
-#include "pci.h"
-#include "../../net/net.h"
-#include "../../arch/x86_64/idt.h"
-#include "../../mm/pmm.h"
-#include "../../mm/vmm.h"
-#include "../../lib/printf.h"
-#include "../driver.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 // ─── Virtio legacy register offsets ──────────────────────────────────────────
 #define VIRTIO_PCI_HOST_FEATURES 0x00

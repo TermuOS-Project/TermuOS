@@ -1,5 +1,4 @@
-#include "ata.h"
-#include "../../lib/printf.h"
+#include "Kernel.h"
 
 #define ATA_DATA 0x1F0
 #define ATA_SECTOR_CNT 0x1F2

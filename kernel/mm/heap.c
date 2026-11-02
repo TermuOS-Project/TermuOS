@@ -1,9 +1,4 @@
-#include "heap.h"
-#include "pmm.h"
-#include "vmm.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 #define HEAP_START 0xffff910000000000ULL
 #define HEAP_MAGIC 0xCAFEBABEDEADBEEFULL

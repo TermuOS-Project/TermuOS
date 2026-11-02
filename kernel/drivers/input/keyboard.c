@@ -1,6 +1,4 @@
-#include "keyboard.h"
-#include "../../arch/x86_64/idt.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 #define KBD_DATA 0x60
 #define KBD_STATUS 0x64

@@ -1,9 +1,4 @@
-#include "ioman.h"
-#include "../ob/object.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 /* Static pools */
 #define MAX_DRIVERS 16

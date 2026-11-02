@@ -1,10 +1,4 @@
-#include "virtio_snd.h"
-#include "../driver.h"
-#include "../net/pci.h"
-#include "../../lib/printf.h"
-#include "../../mm/vmm.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 #define VIRTIO_VENDOR     0x1AF4
 #define VIRTIO_SND_DEVICE 0x1059

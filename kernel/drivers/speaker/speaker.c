@@ -1,7 +1,4 @@
-#include "speaker.h"
-#include "../driver.h"
-#include "../../lib/printf.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 extern volatile uint64_t timer_ticks;
 

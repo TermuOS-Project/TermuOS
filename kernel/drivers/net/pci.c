@@ -1,6 +1,4 @@
-#include "pci.h"
-#include "../../lib/printf.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 #define PCI_CONFIG_ADDR 0xCF8
 #define PCI_CONFIG_DATA 0xCFC

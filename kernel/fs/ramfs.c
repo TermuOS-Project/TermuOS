@@ -1,9 +1,4 @@
-#include "ramfs.h"
-#include "vfs.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 #define RAMFS_MAX_CHILDREN 64
 #define RAMFS_INITIAL_SIZE 256

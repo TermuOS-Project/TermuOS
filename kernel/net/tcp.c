@@ -1,11 +1,4 @@
-#include "tcp.h"
-#include "../lib/printf.h"
-#include "../lib/string.h"
-#include "net.h"
-#include <stdint.h>
-#include <stddef.h>
-
-#include "../drivers/net/virtio_net.h"
+#include "Kernel.h"
 
 tcp_pcb_t tcp_pcb;
 

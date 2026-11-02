@@ -1,13 +1,4 @@
-#include "launch.h"
-#include "exec.h"
-#include "process.h"
-#include "../mm/vmm.h"
-#include "../mm/heap.h"
-#include "../sched/scheduler.h"
-#include "../user/userspace.h"
-#include "../lib/printf.h"
-#include "../arch/x86_64/gdt.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 static void exec_thread_entry()
 {

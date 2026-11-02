@@ -1,10 +1,4 @@
-#include "scheduler.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include "../ob/object.h"
-#include "../arch/x86_64/gdt.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 thread_t threads[MAX_THREADS];
 int current = 0;

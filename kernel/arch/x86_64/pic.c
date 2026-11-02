@@ -1,5 +1,4 @@
-#include "pic.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 // 8259 PIC ports
 #define PIC1_CMD 0x20

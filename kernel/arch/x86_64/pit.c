@@ -1,8 +1,4 @@
-#include "pit.h"
-#include "idt.h"
-#include "../../sched/scheduler.h"
-#include "../../drivers/video/terminal.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 #define PIT_CHANNEL0 0x40
 #define PIT_CMD 0x43

@@ -1,5 +1,4 @@
-#include "fpu.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 void fpu_init(void)
 {

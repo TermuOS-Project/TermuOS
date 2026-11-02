@@ -1,5 +1,4 @@
-#include "rtc.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 #define CMOS_ADDR 0x70
 #define CMOS_DATA 0x71

@@ -1,8 +1,4 @@
-#include "object.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 /* Helper functions */
 static int ob_strcmp(const char *a, const char *b)

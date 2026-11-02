@@ -1,31 +1,4 @@
-#include "syscall.h"
-#include "uaccess.h"
-#include "../arch/x86_64/gdt.h"
-#include "../drivers/video/terminal.h"
-#include "../drivers/serial/serial.h"
-#include "../drivers/video/fb.h"
-#include "../drivers/input/keyboard.h"
-#include "../drivers/input/mouse.h"
-#include "../drivers/driver.h"
-#include "../drivers/rtc/rtc.h"
-#include "../drivers/gpu/gpu_fb.h"
-#include "../drivers/net/virtio_net.h"
-#include "../sched/scheduler.h"
-#include "../fs/vfs.h"
-#include "../mm/pmm.h"
-#include "../mm/vmm.h"
-#include "../mm/heap.h"
-#include "../ipc/port.h"
-#include "../proc/launch.h"
-#include "../proc/process.h"
-#include "uaccess.h"
-#include "../lib/printf.h"
-#include "../net/tcp.h"
-#include "../net/net.h"
-#include "../ob/object.h"
-#include "../ob/event.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 extern volatile uint64_t timer_ticks;
 extern void syscall_entry(void);

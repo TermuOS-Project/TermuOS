@@ -1,26 +1,4 @@
-#include "shell.h"
-#include "../drivers/video/terminal.h"
-#include "../drivers/input/keyboard.h"
-#include "../drivers/input/mouse.h"
-#include "../drivers/net/virtio_net.h"
-#include "../mm/pmm.h"
-#include "../mm/heap.h"
-#include "../arch/x86_64/pit.h"
-#include "../sched/scheduler.h"
-#include "../fs/vfs.h"
-#include "../fs/tfs.h"
-#include "../fs/install.h"
-#include "../net/net.h"
-#include "../net/tcp.h"
-#include "../user/syscall.h"
-#include "../proc/process.h"
-#include "../proc/launch.h"
-#include "../ob/object.h"
-#include "../lib/printf.h"
-#include "../lib/string.h"
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
+#include "Kernel.h"
 
 extern thread_t threads[MAX_THREADS];
 

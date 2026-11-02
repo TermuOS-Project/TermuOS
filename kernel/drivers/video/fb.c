@@ -1,7 +1,4 @@
-#include "fb.h"
-#include "../gpu/gpu_fb.h"
-
-#include <stddef.h>
+#include "Kernel.h"
 
 static struct limine_framebuffer *_fb = 0;
 static int _use_gpu = 0;

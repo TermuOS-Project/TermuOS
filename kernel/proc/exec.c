@@ -1,12 +1,4 @@
-#include "exec.h"
-#include "../mm/pmm.h"
-#include "../mm/vmm.h"
-#include "../mm/heap.h"
-#include "../fs/vfs.h"
-#include "../user/uaccess.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 // ELF64 structures
 

@@ -1,8 +1,4 @@
-#include "event.h"
-#include "../sched/scheduler.h"
-#include "../mm/heap.h"
-#include "../lib/printf.h"
-#include <stddef.h>
+#include "Kernel.h"
 
 static int ev_strlen(const char *s)
 {

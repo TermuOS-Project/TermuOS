@@ -1,10 +1,4 @@
-#include "net.h"
-#include "tcp.h"
-#include "../drivers/net/virtio_net.h"
-#include "../lib/printf.h"
-#include "../lib/string.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 netif_t netif = {0};
 

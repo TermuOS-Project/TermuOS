@@ -1,12 +1,4 @@
-#include "devfs.h"
-#include "../drivers/video/terminal.h"
-#include "../drivers/video/fb.h"
-#include "../drivers/input/keyboard.h"
-#include "../sched/scheduler.h"
-#include "../lib/string.h"
-#include <stdint.h>
-#include <stddef.h>
-#include <limine.h>
+#include "Kernel.h"
 
 typedef struct
 {

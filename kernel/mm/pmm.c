@@ -1,8 +1,4 @@
-#include "pmm.h"
-#include "vmm.h"
-#include "../lib/printf.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 // Bitmap allocator
 //

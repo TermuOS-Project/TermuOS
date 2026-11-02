@@ -1,8 +1,4 @@
-#include "idt.h"
-#include "pic.h"
-#include "../../drivers/video/terminal.h"
-#include "../../lib/printf.h"
-#include <stdint.h>
+#include "Kernel.h"
 
 static inline uint8_t inb(uint16_t port)
 {

@@ -1,5 +1,4 @@
-#include "uaccess.h"
-#include "../mm/vmm.h"
+#include "Kernel.h"
 
 #define UA_PAGE_SIZE 4096ULL
 #define UA_PAGE_OFF(a) ((a) & (UA_PAGE_SIZE - 1))

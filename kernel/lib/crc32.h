@@ -1,6 +1,5 @@
 #pragma once
-#include <stdint.h>
-#include <stddef.h>
+#include "Kernel.h"
 
 uint32_t crc32(const void *data, size_t len);
 void crc32_selftest(void);

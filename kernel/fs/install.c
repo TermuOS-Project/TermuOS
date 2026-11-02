@@ -1,8 +1,4 @@
-#include "install.h"
-#include "vfs.h"
-#include "../lib/printf.h"
-#include <limine.h>
-#include <stdint.h>
+#include "Kernel.h"
 
 extern volatile struct limine_module_request module_request;
 
