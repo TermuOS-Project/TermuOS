@@ -23,6 +23,7 @@
 #include "../net/tcp.h"
 #include "../net/net.h"
 #include "../ob/object.h"
+#include "../ob/event.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -992,6 +993,77 @@ static uint64_t sys_ob_dup(uint64_t handle)
     return (uint64_t)h;
 }
 
+static uint64_t sys_event_create(uint64_t name_uva, uint64_t manual)
+{
+    process_t *proc = cur_proc();
+    if (!proc)
+        return (uint64_t)-1;
+
+    char name[64];
+    for (int i = 0; i < 63; i++) {
+        uint8_t c;
+        if (copy_from_user(proc, &c, name_uva + (uint64_t)i, 1) < 0)
+            return (uint64_t)-1;
+        name[i] = (char)c;
+        if (c == 0)
+            break;
+        if (i == 62)
+            name[63] = 0;
+    }
+
+    object_header_t *obj = ob_event_create(name, (int)manual);
+    if (!obj)
+        return (uint64_t)-1;
+
+    int h = handle_alloc(&proc->handles, obj, OB_ACCESS_ALL);
+    if (h < 0)
+        return (uint64_t)-1;
+    return (uint64_t)h;
+}
+
+static object_header_t *handle_as_event(process_t *proc, int h)
+{
+    object_header_t *obj = handle_get(&proc->handles, h, OB_ACCESS_READ);
+    if (!obj || obj->type != &ObTypeEvent)
+        return NULL;
+    return obj;
+}
+
+static uint64_t sys_event_set(uint64_t h)
+{
+    process_t *proc = cur_proc();
+    if (!proc)
+        return (uint64_t)-1;
+    object_header_t *obj = handle_as_event(proc, (int)h);
+    if (!obj)
+        return (uint64_t)-1;
+    ob_event_set(obj);
+    return 0;
+}
+
+static uint64_t sys_event_reset(uint64_t h)
+{
+    process_t *proc = cur_proc();
+    if (!proc)
+        return (uint64_t)-1;
+    object_header_t *obj = handle_as_event(proc, (int)h);
+    if (!obj)
+        return (uint64_t)-1;
+    ob_event_reset(obj);
+    return 0;
+}
+
+static uint64_t sys_event_wait(uint64_t h)
+{
+    process_t *proc = cur_proc();
+    if (!proc)
+        return (uint64_t)-1;
+    object_header_t *obj = handle_as_event(proc, (int)h);
+    if (!obj)
+        return (uint64_t)-1;
+    return (uint64_t)ob_event_wait(obj);
+}
+
 /* ── dispatch ────────────────────────────────────────────────────────────── */
 
 uint64_t
@@ -1083,6 +1155,14 @@ syscall_dispatch(uint64_t num, uint64_t a, uint64_t b, uint64_t c, uint64_t d, u
         return sys_ob_close(a);
     case SYS_OB_DUP:
         return sys_ob_dup(a);
+    case SYS_EVENT_CREATE:
+        return sys_event_create(a, b);
+    case SYS_EVENT_SET:
+        return sys_event_set(a);
+    case SYS_EVENT_RESET:
+        return sys_event_reset(a);
+    case SYS_EVENT_WAIT:
+        return sys_event_wait(a);
     default:
         kprintf("[kernel] unknown syscall %llu\n", num);
         return (uint64_t)-1;
