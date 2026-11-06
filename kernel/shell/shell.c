@@ -696,68 +696,6 @@ static size_t str_append(char *dst, size_t off, size_t cap, const char *s)
     return off;
 }
 
-static void cmd_httpget(int argc, char **argv)
-{
-    if (argc < 3) {
-        kprintf("usage: httpget <ip> <port> [path]\n");
-        return;
-    }
-
-    ip4_t ip;
-    if (parse_ip4(argv[1], &ip) != 0) {
-        kprintf("httpget: bad ip\n");
-        return;
-    }
-
-    uint16_t port = (uint16_t)sh_atoi(argv[2]);
-    const char *path = (argc >= 4) ? argv[3] : "/";
-
-    if (tcp_connect(ip, port, 50000) != 0) {
-        kprintf("httpget: connect failed\n");
-        return;
-    }
-
-    char req[256];
-    size_t n = 0;
-    n = str_append(req, n, sizeof(req), "GET ");
-    n = str_append(req, n, sizeof(req), path);
-    n = str_append(req, n, sizeof(req), " HTTP/1.0\r\nHost: 10.0.2.2\r\nConnection: close\r\n\r\n");
-
-    if (tcp_send(req, n) < 0) {
-        kprintf("httpget: send failed\n");
-        tcp_close();
-        return;
-    }
-
-    char page[2048];
-    size_t got = 0;
-    for (int spins = 0; spins < 10000 && got < sizeof(page) - 1; spins++) {
-        virtio_net_poll();
-        int r = tcp_recv(page + got, sizeof(page) - 1 - got);
-        if (r > 0)
-            got += (size_t)r;
-        if (tcp_pcb.state == TCP_STATE_CLOSE_WAIT ||
-            tcp_pcb.state == TCP_STATE_TIME_WAIT ||
-            tcp_pcb.state == TCP_STATE_CLOSED)
-            break;
-        for (volatile int j = 0; j < 5000; j++)
-            ;
-    }
-    page[got] = '\0';
-
-    char *body = page;
-    for (size_t i = 0; i + 3 < got; i++) {
-        if (page[i] == '\r' && page[i + 1] == '\n' &&
-            page[i + 2] == '\r' && page[i + 3] == '\n') {
-            body = page + i + 4;
-            break;
-        }
-    }
-    kprintf("%s\n", body);
-
-    tcp_close();
-}
-
 static void cmd_tcplisten(int argc, char **argv)
 {
     uint16_t port = 8080;
@@ -1125,7 +1063,6 @@ static const command_t commands[] = {
     {"kill", cmd_kill},
     {"install", cmd_install},
     {"tcpconnect", cmd_tcpconnect},
-    {"httpget", cmd_httpget},
     {"tcplisten", cmd_tcplisten},
     {"httpserver", cmd_httpserver},
     {NULL, NULL}};
