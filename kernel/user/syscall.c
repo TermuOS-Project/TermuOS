@@ -863,7 +863,6 @@ static long sys_tcp_send(uint64_t uva, uint64_t len)
 
 static long sys_tcp_recv(uint64_t uva, uint64_t max)
 {
-    g_in_syscall = 1;
     process_t *proc = cur_proc();
     uint8_t tmp[512];
 
@@ -876,9 +875,8 @@ static long sys_tcp_recv(uint64_t uva, uint64_t max)
         virtio_net_poll();
         if (tcp_rx_available() > 0)
             break;
-        if (!tcp_is_established() && tcp_rx_available() == 0) {
+        if (!tcp_is_established() && tcp_rx_available() == 0)
             break;
-        }
         for (volatile int j = 0; j < 1000; j++)
             ;
     }
@@ -890,7 +888,6 @@ static long sys_tcp_recv(uint64_t uva, uint64_t max)
         return 0;
     if (copy_to_user(proc, uva, tmp, (size_t)n) < 0)
         return -1;
-    g_in_syscall = 0;
     return n;
 }
 

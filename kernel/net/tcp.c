@@ -322,10 +322,14 @@ int tcp_rx_available(void)
 
 int tcp_recv(void *buf, size_t max)
 {
-    if (!tcp_is_established() || !buf)
+    if (!buf)
         return -1;
-    if (tcp_pcb.rx_len == 0)
+
+    if (tcp_pcb.rx_len == 0) {
+        if (!tcp_is_established())
+            return 0;
         return 0;
+    }
 
     size_t n = tcp_pcb.rx_len < max ? tcp_pcb.rx_len : max;
     uint8_t *d = (uint8_t *)buf;
