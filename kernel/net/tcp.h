@@ -35,7 +35,7 @@ typedef enum {
     SMTP_STATE_DONE = 8,
 } smtp_state_t;
 
-#define TCP_RX_CAP 4096
+#define TCP_RX_CAP (256 * 1024)
 
 typedef struct {
     int active;

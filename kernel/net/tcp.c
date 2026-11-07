@@ -180,6 +180,7 @@ void tcp_input(const ip4_hdr_t *ip, const tcp_hdr_t *tcp,
         tcp_pcb.rx_len += n;
 
         tcp_pcb.rcv_nxt += (uint32_t)len;
+        
         tcp_send_segment(ip->src, tcp_pcb.local_port, src_port,
                          tcp_pcb.snd_nxt, tcp_pcb.rcv_nxt,
                          TCP_ACK, NULL, 0);
@@ -347,35 +348,42 @@ int tcp_close(void)
     if (!tcp_pcb.active)
         return -1;
 
-    if (tcp_pcb.state == TCP_STATE_ESTABLISHED ||
-        tcp_pcb.state == TCP_STATE_CLOSE_WAIT) {
+    /*
+     * HTTP/1.0: server closed first. Body is already in rx_buf.
+     * Skip FIN/ACK polling — it has been a source of panics.
+     */
+    if (tcp_pcb.state == TCP_STATE_CLOSE_WAIT ||
+        tcp_pcb.state == TCP_STATE_TIME_WAIT ||
+        tcp_pcb.state == TCP_STATE_LAST_ACK ||
+        tcp_pcb.state == TCP_STATE_CLOSED) {
+        tcp_pcb.active = 0;
+        tcp_pcb.state = TCP_STATE_CLOSED;
+        /* keep rx_len until user has drained; clear here only after HTTP done */
+        tcp_pcb.rx_len = 0;
+        kprintf("tcp: CLOSED (peer already gone)\n");
+        return 0;
+    }
+
+    if (tcp_pcb.state == TCP_STATE_ESTABLISHED) {
         if (tcp_send_segment(tcp_pcb.remote_ip,
                              tcp_pcb.local_port,
                              tcp_pcb.remote_port,
                              tcp_pcb.snd_nxt,
                              tcp_pcb.rcv_nxt,
                              TCP_FIN | TCP_ACK,
-                             NULL, 0) < 0)
-            return -1;
-
-        tcp_pcb.snd_nxt += 1;
-
-        if (tcp_pcb.state == TCP_STATE_CLOSE_WAIT)
-            tcp_pcb.state = TCP_STATE_LAST_ACK;
-        else    
+                             NULL, 0) == 0) {
+            tcp_pcb.snd_nxt += 1;
             tcp_pcb.state = TCP_STATE_FIN_WAIT_1;
-
-        kprintf("tcp: FIN sent state=%d\n", (int)tcp_pcb.state);
-    }
-
-    /* poll for peer ACK/FIN */
-    for (int i = 0; i < 2000; i++) {
-        virtio_net_poll();
-        if (tcp_pcb.state == TCP_STATE_CLOSED ||
-            tcp_pcb.state == TCP_STATE_TIME_WAIT)
-            break;
-        for (volatile int j = 0; j < 10000; j++)
-            ;
+            kprintf("tcp: FIN sent\n");
+            for (int i = 0; i < 500; i++) {
+                virtio_net_poll();
+                if (tcp_pcb.state == TCP_STATE_CLOSED ||
+                    tcp_pcb.state == TCP_STATE_TIME_WAIT)
+                    break;
+                for (volatile int j = 0; j < 1000; j++)
+                    ;
+            }
+        }
     }
 
     tcp_pcb.active = 0;

@@ -35,21 +35,24 @@ int http_get(const uint8_t ip[4], uint16_t port,
     }
 
     size_t got = 0;
-    for (int spins = 0; spins < 10000 && got + 1 < out_max; spins++) {
+    int idle = 0;
+    for (int spins = 0; spins < 20000 && got + 1 < out_max; spins++) {
         int r = tcp_recv(out + got, out_max - 1 - got);
-        if (r < 0)
-            break;
         if (r > 0) {
             got += (size_t)r;
+            idle = 0;
             continue;
         }
-        for (volatile int k = 0; k < 5000; k++)
+        if (r == 0) {
+            if (++idle > 100)
+                break;
+        } else
+            break;
+        for (volatile int k = 0; k < 1000; k++)
             ;
     }
     out[got] = '\0';
     tcp_close();
-    for (volatile int i = 0; i < 500000; i++)
-        ;
     return (int)got;
 }
 

@@ -334,12 +334,17 @@ $(TSYS_OUT)/httpget.tsys: tsys/httpget/httpget.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/httpget/httpget.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
+$(TSYS_OUT)/tup.tsys: tsys/tup/tup.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(TSYS_HDRS) | $(TSYS_OUT)
+	$(Q)printf "  [TSYS]  tup.tsys\n"
+	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
+		$(TSYS_CRT0) tsys/tup/tup.c $(TLIBC_A) $(TERMUOS_LIB_A)
+
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
 #	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TERMUOS_LIB_A)
 
-TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys $(TSYS_OUT)/about.tsys $(TSYS_OUT)/httpget.tsys
+TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys $(TSYS_OUT)/about.tsys $(TSYS_OUT)/httpget.tsys $(TSYS_OUT)/tup.tsys
 
 tsys: tlibc $(TERMUOS_LIB_A) $(LIBLUNA_A) $(TSYS_BINS)
 

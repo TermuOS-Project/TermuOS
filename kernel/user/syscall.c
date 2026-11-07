@@ -820,7 +820,6 @@ extern volatile int g_in_syscall;
 
 static long sys_tcp_connect(uint64_t ip_uva, uint64_t port, uint64_t local_port)
 {
-    g_in_syscall = 1;
     process_t *proc = cur_proc();
     uint8_t raw[4];
     ip4_t ip;
@@ -835,12 +834,12 @@ static long sys_tcp_connect(uint64_t ip_uva, uint64_t port, uint64_t local_port)
     ip.b[2] = raw[2];
     ip.b[3] = raw[3];
 
-    if (local_port == 0 || local_port > 65535)
-        local_port = 50000;
-    if (port == 0 || port > 65535)
+    if (port == 0 || port > 65536)
         return -1;
 
-    g_in_syscall = 0;
+    if (local_port > 65536)
+        local_port = 0;
+
     return tcp_connect(ip, (uint16_t)port, (uint16_t)local_port);
 }
 
