@@ -340,41 +340,12 @@ $(TSYS_OUT)/tup.tsys: tsys/tup/tup.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TLIBC_A) $(
 	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) $(TLIBC_INC) -o $@ \
 		$(TSYS_CRT0) tsys/tup/tup.c $(TLIBC_A) $(TERMUOS_LIB_A)
 
-MBEDTLS_DIR := usr/lib/mbedtls
-MBEDTLS_OUT := $(BUILD_DIR)/mbedtls
-MBEDTLS_A   := $(MBEDTLS_OUT)/libmbedtls.a
-MBEDTLS_INC := -Iusr/lib -I$(MBEDTLS_DIR)/include
-
-MBEDTLS_CFLAGS := -static -nostdlib -no-pie -ffreestanding \
-	-fno-stack-protector -fno-asynchronous-unwind-tables \
-	-fcf-protection=none -O2 -Wall \
-	$(TLIBC_INC) $(MBEDTLS_INC) \
-	-DMBEDTLS_CONFIG_FILE='"mbedtls_config_termuos.h"'
-
-$(MBEDTLS_OUT):
-	mkdir -p $@
-
-$(MBEDTLS_OUT)/version.o: $(MBEDTLS_DIR)/library/version.c | $(MBEDTLS_OUT)
-	$(Q)printf "  [MBED]  version.c\n"
-	$(Q)$(TSYS_CC) $(MBEDTLS_CFLAGS) -c $< -o $@
-
-$(MBEDTLS_A): $(MBEDTLS_OUT)/version.o
-	$(Q)printf "  [AR]    libmbedtls.a\n"
-	$(Q)ar rcs $@ $^
-
-$(TSYS_OUT)/mbedtls_ver.tsys: tsys/mbedtls_ver/mbedtls_ver.c $(TSYS_CRT0) \
-		$(TLIBC_A) $(MBEDTLS_A) | $(TSYS_OUT)
-	$(Q)printf "  [TSYS]  mbedtls_ver.tsys\n"
-	$(Q)$(TSYS_CC) $(MBEDTLS_CFLAGS) -o $@ \
-		$(TSYS_CRT0) tsys/mbedtls_ver/mbedtls_ver.c \
-		$(MBEDTLS_A) $(TLIBC_A)
-
 # Add more apps here, e.g.:
 # $(TSYS_OUT)/hello.tsys: tsys/hello/hello.c $(TSYS_CRT0) $(TERMUOS_LIB_A) $(TSYS_HDRS) | $(TSYS_OUT)
 #	$(Q)printf "  [TSYS]  hello.tsys\n"
 #	$(Q)$(TSYS_CC) $(TSYS_CFLAGS) -o $@ $(TSYS_CRT0) tsys/hello/hello.c $(TERMUOS_LIB_A)
 
-TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys $(TSYS_OUT)/about.tsys $(TSYS_OUT)/httpget.tsys $(TSYS_OUT)/tup.tsys $(TSYS_OUT)/mbedtls_ver.tsys
+TSYS_BINS := $(TSYS_OUT)/echo.tsys $(TSYS_OUT)/uname.tsys $(TSYS_OUT)/cat.tsys $(TSYS_OUT)/edit.tsys $(TSYS_OUT)/lsdrv.tsys $(TSYS_OUT)/help.tsys $(TSYS_OUT)/fetch.tsys $(TSYS_OUT)/hello_tlibc.tsys $(TSYS_OUT)/about.tsys $(TSYS_OUT)/httpget.tsys $(TSYS_OUT)/tup.tsys
 
 tsys: tlibc $(TERMUOS_LIB_A) $(LIBLUNA_A) $(TSYS_BINS)
 
