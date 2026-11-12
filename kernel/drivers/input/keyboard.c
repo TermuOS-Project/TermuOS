@@ -267,6 +267,7 @@ static const char sc_shifted[128] = {
 
 static int shift = 0;
 static int caps = 0;
+static int ctrl = 0;
 
 static inline uint8_t inb(uint16_t port)
 {
@@ -302,7 +303,6 @@ static void keyboard_irq(registers_t *r)
     uint8_t status = inb(KBD_STATUS);
     if (!(status & 0x01))
         return;
-
     if (status & 0x20)
         return;
 
@@ -313,18 +313,38 @@ static void keyboard_irq(registers_t *r)
         uint8_t rel = sc & 0x7f;
         if (rel == 0x2a || rel == 0x36)
             shift = 0;
+        if (rel == 0x1d)
+            ctrl = 0;
         return;
     }
 
     if (sc == 0x2a || sc == 0x36) { shift = 1; return; }
+    if (sc == 0x1d)               { ctrl = 1; return; }
     if (sc == 0x3a)               { caps = !caps; return; }
-    if (sc == 0x1d || sc == 0x38) return;
+    if (sc == 0x38)               return; /* Alt */
     if (sc >= 128)                return;
+
+    /* Esc */
+    if (sc == 0x01) {
+        kbd_push(27);
+        return;
+    }
 
     int upper = shift ^ caps;
     char c = upper ? sc_shifted[sc] : sc_normal[sc];
-    if (c)
-        kbd_push(c);
+    if (!c)
+        return;
+
+    /* Ctrl+A .. Ctrl+Z -> 1..26 */
+    if (ctrl) {
+        if (c >= 'a' && c <= 'z')
+            c = (char)(c - 'a' + 1);
+        else if (c >= 'A' && c <= 'Z')
+            c = (char)(c - 'A' + 1);
+        /* Ctrl+C -> 3 */
+    }
+
+    kbd_push(c);
 }
 
 void keyboard_init(void)

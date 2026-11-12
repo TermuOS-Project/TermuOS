@@ -9,6 +9,14 @@ extern thread_t threads[MAX_THREADS];
 
 #define VFS_MAX_DEPTH 32
 
+static int shell_user_abort(void)
+{
+    if (!keyboard_haschar())
+        return 0;
+    char c = keyboard_getchar();
+    return (c == 3 || c == 27);
+}
+
 static void shell_wait_pid(uint32_t pid)
 {
     for (;;) {
@@ -737,29 +745,56 @@ static void cmd_httpserver(int argc, char **argv)
     if (argc >= 2)
         port = (uint16_t)sh_atoi(argv[1]);
 
-    int rounds = 5;
-    for (int n = 0; n < rounds; n++) {
+    kprintf("httpserver: Ctrl+C or Esc to stop\n");
+
+    for (;;) {
+        if (shell_user_abort())
+            break;
+
         if (tcp_listen(port) != 0) {
             kprintf("httpserver: listen failed\n");
             return;
         }
         kprintf("httpserver: listening on %u\n", port);
 
-        if (tcp_accept() != 0) {
-            kprintf("httpserver: accept failed\n");
-            return;
+        /* accept with abort */
+        {
+            int ok = 0;
+            for (int i = 0; i < 200000; i++) {
+                if (shell_user_abort()) {
+                    tcp_close();
+                    goto done;
+                }
+                virtio_net_poll();
+                if (tcp_pcb.state == TCP_STATE_ESTABLISHED) {
+                    ok = 1;
+                    break;
+                }
+                for (volatile int j = 0; j < 1000; j++)
+                    ;
+            }
+            if (!ok) {
+                kprintf("httpserver: accept timeout\n");
+                tcp_close();
+                continue; /* listen again, or return if you prefer */
+            }
         }
         kprintf("httpserver: client connected\n");
 
         char req[512];
         size_t got = 0;
         for (int i = 0; i < 2000 && got < sizeof(req) - 1; i++) {
+            if (shell_user_abort()) {
+                tcp_close();
+                goto done;
+            }
             virtio_net_poll();
             int r = tcp_recv(req + got, sizeof(req) - 1 - got);
             if (r > 0) {
                 got += (size_t)r;
                 for (size_t j = 0; j + 3 < got; j++) {
-                    if (req[j] == '\r' & req[j + 1] == '\n' && req[j + 2] == '\r' && req[j + 3] == '\n')
+                    if (req[j] == '\r' && req[j + 1] == '\n' &&
+                        req[j + 2] == '\r' && req[j + 3] == '\n')
                         goto have_req;
                 }
             }
@@ -786,6 +821,10 @@ have_req:
         tcp_close();
         kprintf("httpserver: ready for next client\n");
     }
+
+done:
+    tcp_close();
+    kprintf("httpserver: stopped\n");
 }
 
 // ─── PID ─────────────────────────────────────────────────────────────────
