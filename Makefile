@@ -422,7 +422,7 @@ test: iso test-img
 # ---------------------------------------------------------------------------
 run: iso $(DISK_IMG)
 	@qemu-system-x86_64 -cdrom termuos.iso -cpu qemu64,+syscall -m 125M \
-		-netdev user,id=net0,hostfwd=tcp::8080-:8080 \
+		-netdev user,id=net0,hostfwd=tcp::8080-:80 \
 		-device virtio-net-pci,netdev=net0,disable-modern=on \
 		-device virtio-gpu-pci \
 		-audiodev sdl,id=snd \

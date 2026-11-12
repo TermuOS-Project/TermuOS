@@ -714,7 +714,7 @@ static size_t str_append(char *dst, size_t off, size_t cap, const char *s)
 
 static void cmd_tcplisten(int argc, char **argv)
 {
-    uint16_t port = 8080;
+    uint16_t port = 80;
     if (argc >= 2)
         port = (uint16_t)sh_atoi(argv[1]);
 
