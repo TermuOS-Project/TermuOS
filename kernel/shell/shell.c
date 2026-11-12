@@ -9,6 +9,22 @@ extern thread_t threads[MAX_THREADS];
 
 #define VFS_MAX_DEPTH 32
 
+static void shell_wait_pid(uint32_t pid)
+{
+    for (;;) {
+        process_t *p = proc_get(pid);
+        if (!p) 
+            return;
+        if (p->state == PROC_ZOMBIE) {
+            p->state = PROC_DEAD;
+            return;
+        }
+        if (p->state == PROC_DEAD)
+            return;
+        scheduler_yield();
+    }
+}
+
 static void normalize_path(const char *raw, char *out, int max)
 {
     int starts[VFS_MAX_DEPTH];
@@ -937,13 +953,7 @@ static void cmd_run(int argc, char **argv)
         return;
     }
 
-    for (;;)
-    {
-        process_t *p = proc_get((uint32_t)pid);
-        if (!p || p->state == PROC_ZOMBIE || p->state == PROC_DEAD)
-            break;
-        scheduler_yield();
-    }
+    shell_wait_pid((uint32_t)pid);
 }
 
 static void cmd_install(int argc, char **argv)
@@ -1016,14 +1026,7 @@ static int shell_try_tsys(int argc, char **argv)
     int pid = exec_launch_args(path, 0xffffffff, ac, av);
     if (pid < 0)
         return -1;
-
-    for (;;)
-    {
-        process_t *p = proc_get((uint32_t)pid);
-        if (!p || p->state == PROC_ZOMBIE || p->state == PROC_DEAD)
-            break;
-        scheduler_yield();
-    }
+    shell_wait_pid((uint32_t)pid);
     return 0;
 }
 
