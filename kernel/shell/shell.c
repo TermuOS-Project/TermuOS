@@ -737,52 +737,55 @@ static void cmd_httpserver(int argc, char **argv)
     if (argc >= 2)
         port = (uint16_t)sh_atoi(argv[1]);
 
-    if (tcp_listen(port) != 0) {
-        kprintf("httpserver: listen failed\n");
-        return;
-    }
-    kprintf("httpserver: listening on %u\n", port);
-
-    if (tcp_accept() != 0) {
-        kprintf("httpserver: accept failed\n");
-        return;
-    }
-    kprintf("httpserver: client connected\n");
-
-    char req[512];
-    size_t got = 0;
-    for (int i = 0; i < 2000 && got < sizeof(req) - 1; i++) {
-        virtio_net_poll();
-        int r = tcp_recv(req + got, sizeof(req) - 1 - got);
-        if (r > 0) {
-            got += (size_t)r;
-            for (size_t j = 0; j + 3 < got; j++) {
-                if (req[j] == '\r' && req[j+1] == '\n' &&
-                    req[j+2] == '\r' && req[j+3] == '\n')
-                    goto have_req;
-            }
+    int rounds = 5;
+    for (int n = 0; n < rounds; n++) {
+        if (tcp_listen(port) != 0) {
+            kprintf("httpserver: listen failed\n");
+            return;
         }
-        for (volatile int k = 0; k < 5000; k++)
-            ;
-    }
+        kprintf("httpserver: listening on %u\n", port);
+
+        if (tcp_accept() != 0) {
+            kprintf("httpserver: accept failed\n");
+            return;
+        }
+        kprintf("httpserver: client connected\n");
+
+        char req[512];
+        size_t got = 0;
+        for (int i = 0; i < 2000 && got < sizeof(req) - 1; i++) {
+            virtio_net_poll();
+            int r = tcp_recv(req + got, sizeof(req) - 1 - got);
+            if (r > 0) {
+                got += (size_t)r;
+                for (size_t j = 0; j + 3 < got; j++) {
+                    if (req[j] == '\r' & req[j + 1] == '\n' && req[j + 2] == '\r' && req[j + 3] == '\n')
+                        goto have_req;
+                }
+            }
+            for (volatile int k = 0; k < 5000; k++)
+                ;
+        }
 have_req:
-    req[got] = '\0';
-    kprintf("httpserver: got %u bytes request\n", (unsigned)got);
+        req[got] = '\0';
+        kprintf("httpserver: got %u bytes request\n", (unsigned)got);
 
-    static const char resp[] =
-        "HTTP/1.0 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "<html><body><h1>TermuOS</h1>"
-        "<p>Hello from the guest.</p></body></html>\r\n";
+        static const char resp[] =
+            "HTTP/1.0 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "<html><body><h1>TermuOS</h1>"
+            "<p>Hello from the guest.</p></body></html>\r\n";
 
-    if (tcp_send(resp, sizeof(resp) - 1) < 0)
-        kprintf("httpserver: send failed\n");
-    else
-        kprintf("httpserver: response send\n");
+        if (tcp_send(resp, sizeof(resp) - 1) < 0)
+            kprintf("httpserver: send failed\n");
+        else
+            kprintf("httpserver: response send\n");
 
-    tcp_close();
+        tcp_close();
+        kprintf("httpserver: ready for next client\n");
+    }
 }
 
 // ─── PID ─────────────────────────────────────────────────────────────────
