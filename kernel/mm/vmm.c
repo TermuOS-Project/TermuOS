@@ -151,3 +151,45 @@ uint64_t vmm_virt_to_phys(pagemap_t pm, uint64_t virt)
         return 0;
     return (pt[PT_IDX(virt)] & PAGE_MASK) + (virt & (PAGE_SIZE - 1));
 }
+
+static void free_pt_level(uint64_t *table, int level)
+{
+    /* level: 4=PML4, 3=PDPT, 2=PD, 1=PT */
+    int max = (level == 4) ? 256 : 512; /* PML4: user only */
+
+    for (int i = 0; i < max; i++) {
+        if (!(table[i] & VMM_PRESENT))
+            continue;
+
+        uint64_t entry = table[i];
+        uint64_t phys = entry & PAGE_MASK;
+
+        if (level > 1) {
+            uint64_t *next = phys_to_virt_table(phys);
+            free_pt_level(next, level - 1);
+            pmm_free((void *)phys); /* free the table page itself */
+        } else {
+            /* leaf: free the mapped frame */
+            pmm_free((void *)phys);
+        }
+        table[i] = 0;
+    }
+}
+
+void vmm_destroy(pagemap_t pm)
+{
+    if (!pm)
+        return;
+
+    /* Never destroy the kernel CR3 */
+    uint64_t cr3;
+    __asm__ volatile("movq %%cr3, %0" : "=r"(cr3));
+    if ((cr3 & PAGE_MASK) == (pm & PAGE_MASK))
+        vmm_switch(proc_kernel()->pagemap);
+
+    uint64_t *pml4 = phys_to_virt_table(pm);
+    free_pt_level(pml4, 4);
+
+    /* free the PML4 page itself */
+    pmm_free((void *)(pm & PAGE_MASK));
+}

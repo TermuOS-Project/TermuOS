@@ -24,6 +24,7 @@ void vmm_map(pagemap_t pm, uint64_t virt, uint64_t phys, uint64_t flags);
 void vmm_unmap(pagemap_t pm, uint64_t virt);
 void vmm_switch(pagemap_t pm);
 uint64_t vmm_virt_to_phys(pagemap_t pm, uint64_t virt);
+void vmm_destroy(pagemap_t pm);
 
 /*
  * Return the leaf PTE mapping `virt`, or 0 if the address is not mapped.

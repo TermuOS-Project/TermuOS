@@ -16,7 +16,7 @@ static void shell_wait_pid(uint32_t pid)
         if (!p) 
             return;
         if (p->state == PROC_ZOMBIE) {
-            p->state = PROC_DEAD;
+            proc_reap(p);
             return;
         }
         if (p->state == PROC_DEAD)
@@ -974,22 +974,7 @@ static int shell_exec_path(const char *path)
     if (pid < 0)
         return -1;
 
-    for (;;)
-    {
-        process_t *p = proc_get((uint32_t)pid);
-        if (!p)
-        {
-            break;
-        }
-        if (p->state == PROC_ZOMBIE)
-        {
-            p->state = PROC_DEAD;
-            break;
-        }
-        if (p->state == PROC_DEAD)
-            break;
-        scheduler_yield();
-    }
+    shell_wait_pid((uint32_t)pid);
     return 0;
 }
 

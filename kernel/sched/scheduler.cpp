@@ -75,8 +75,16 @@ int Scheduler::next_thread()
             if (idx == 0)
                 continue;
 
-            ThreadState st = state_of(threads[idx]);
+            thread_t &t = threads[idx];
+            ThreadState st = state_of(t);
+
             if (st == ThreadState::Dead || st == ThreadState::Blocked)
+                continue;
+
+            /* reaped / missing process */
+            if (!t.owner)
+                continue;
+            if (t.owner->state == PROC_DEAD || t.owner->state == PROC_ZOMBIE)
                 continue;
 
             if (pass == 0 && st == ThreadState::Ready)
@@ -85,6 +93,9 @@ int Scheduler::next_thread()
                 return idx;
         }
     }
+
+    if (state_of(threads[0]) != ThreadState::Dead)
+        return 0;
     return -1;
 }
 
@@ -239,8 +250,11 @@ void Scheduler::yield()
     set_state(threads[next], ThreadState::Running);
     load_thread(next);
 
-    if (threads[prev].owner != threads[next].owner)
-        vmm_switch(threads[next].owner->pagemap);
+    if (threads[prev].owner != threads[next].owner) {
+        process_t *own = threads[next].owner;
+        pagemap_t pm = (own && own->pagemap) ? own->pagemap : proc_kernel()->pagemap;
+        vmm_switch(pm);
+    }
 
     __asm__ volatile("sti");
     context_switch(&threads[prev].rsp, threads[next].rsp);
@@ -263,8 +277,10 @@ void Scheduler::tick(registers_t *r)
     load_thread(next);
 
     uint64_t new_cr3 = 0;
-    if (threads[prev].owner != threads[next].owner)
-        new_cr3 = threads[next].owner->pagemap;
+    if (threads[prev].owner != threads[next].owner) {
+        process_t *own = threads[next].owner;
+        new_cr3 = (own && own->pagemap) ? own->pagemap : proc_kernel()->pagemap;
+    }
 
     preempt_switch(&threads[prev].rsp, threads[next].rsp, new_cr3);
 }

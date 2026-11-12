@@ -659,8 +659,7 @@ static uint64_t sys_wait(uint64_t pid)
         if (p->state == PROC_ZOMBIE)
         {
             int code = p->exit_code;
-            p->state = PROC_DEAD;
-            kprintf("sys_wait: reaped pid=%u code=%d\n", (unsigned)pid, code);
+            proc_reap(p);
             return (uint64_t)(int64_t)code;
         }
 

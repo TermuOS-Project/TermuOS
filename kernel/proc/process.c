@@ -3,6 +3,8 @@
 static process_t proc_table[MAX_PROCESSES];
 static uint32_t next_pid = 0;
 
+extern thread_t threads[MAX_THREADS];
+
 void proc_init(void)
 {
   for (int i = 0; i < MAX_PROCESSES; i++)
@@ -207,4 +209,36 @@ int proc_kill(uint32_t pid)
 handle_table_t *proc_handles(process_t *p)
 {
   return p ? &p->handles : NULL;
+}
+
+void proc_reap(process_t *p)
+{
+  if (!p || p == proc_kernel())
+    return;
+  if (p->state != PROC_ZOMBIE && p->state != PROC_DEAD)
+    return;
+  
+  for (int i = 0; i < MAX_THREADS; i++) {
+    if (threads[i].owner == p && threads[i].state != THREAD_DEAD) {
+      if (threads[i].ob_header) {
+        ob_deref(threads[i].ob_header);
+        threads[i].ob_header = NULL;
+      }
+      threads[i].state = THREAD_DEAD;
+      threads[i].owner = NULL;
+    }
+  }
+
+  if (p->pagemap) {
+    uint64_t cr3;
+    __asm__ volatile("movq %%cr3, %0" : "=r"(cr3));
+    if ((cr3 & ~0xFFFULL) == (p->pagemap & ~0xFFFULL))
+      vmm_switch(proc_kernel()->pagemap);
+
+    //vmm_destroy(p->pagemap);
+    p->pagemap = 0;
+  }
+
+  p->state = PROC_DEAD;
+  p->exit_code = 0;
 }
