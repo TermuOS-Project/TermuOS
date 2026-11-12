@@ -7,6 +7,7 @@ _start:
     xor %ebp, %ebp
     mov (%rsp), %rdi
     lea 8(%rsp), %rsi
+    andq $~0xf, %rsp
     call main
     mov %rax, %rdi
     call exit

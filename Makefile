@@ -255,6 +255,7 @@ TSYS_CFLAGS  := -static -nostdlib -no-pie -ffreestanding \
                 -fno-stack-protector -fno-asynchronous-unwind-tables \
                 -fcf-protection=none -O2 -Wall \
                 $(TLIBC_INC) $(TERMUOS_LIB_INC)
+TSYS_CFLAGS += -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-ssse3 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2
 
 TSYS_CRT0    := tsys/lib/crt0.S
 TSYS_OUT     := $(BUILD_DIR)/tsys
