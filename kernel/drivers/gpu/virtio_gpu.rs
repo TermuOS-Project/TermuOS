@@ -214,9 +214,7 @@ struct GpuDriver {
 unsafe impl Sync for GpuDriver {}
 
 extern "C" fn virtio_gpu_driver_init() -> i32 {
-    unsafe {
-        virtio_gpu_rust_probe();
-    }
+    virtio_gpu_rust_probe();
     0
 }
 

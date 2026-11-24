@@ -2,7 +2,7 @@
 fn has_rdrand() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
-        let r = unsafe { core::arch::x86_64::__cpuid(1) };
+        let r =  core::arch::x86_64::__cpuid(1);
         (r.ecx & (1 << 30)) != 0
     }
     #[cfg(not(target_arch = "x86_64"))]
